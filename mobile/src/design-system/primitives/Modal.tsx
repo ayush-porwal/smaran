@@ -4,9 +4,10 @@
 //
 // Sheet (bottom drawer) is from Tamagui's `Sheet` and is exported
 // separately. Modals are center-prompt; sheets slide from the bottom.
-import { Dialog, YStack, Button } from 'tamagui';
+import { Dialog, YStack } from 'tamagui';
 import { type ReactNode } from 'react';
 
+import { Button } from './Button';
 import { Heading } from './Heading';
 import { Text } from './Text';
 
@@ -37,7 +38,6 @@ export function Modal({
         <Dialog.Overlay
           key="overlay"
           backgroundColor="rgba(0,0,0,0.5)"
-          // Reanimated-driven entry/exit handled by Tamagui.
         />
         <Dialog.Content
           key="content"
@@ -63,29 +63,16 @@ export function Modal({
             <YStack gap="$2" marginTop="$2">
               {primaryAction ? (
                 <Button
-                  backgroundColor={destructive ? '$danger' : '$accent'}
-                  color="#FFFFFF"
-                  fontWeight="600"
-                  paddingVertical="$3"
-                  borderRadius="$md"
+                  variant={destructive ? 'danger' : 'filled'}
+                  loading={primaryAction.loading}
                   onPress={primaryAction.onPress}
-                  disabled={primaryAction.loading}
-                  pressStyle={{
-                    backgroundColor: destructive ? '$danger' : '$accentPressed',
-                  }}
+                  fullWidth
                 >
                   {primaryAction.label}
                 </Button>
               ) : null}
               {secondaryAction ? (
-                <Button
-                  backgroundColor="transparent"
-                  color="$textSecondary"
-                  fontWeight="500"
-                  paddingVertical="$3"
-                  borderRadius="$md"
-                  onPress={secondaryAction.onPress}
-                >
+                <Button variant="ghost" tone="textSecondary" onPress={secondaryAction.onPress} fullWidth>
                   {secondaryAction.label}
                 </Button>
               ) : null}

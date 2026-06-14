@@ -24,10 +24,14 @@ type TextFieldProps = Omit<InputProps, 'size'> & {
   // to undefined, in which case no explicit `for` is set (Label wraps
   // the input for implicit association).
   id?: string;
+  // When true, returns just the styled <Input> without a label or
+  // helper slot. Use for inline composers or other label-less inputs
+  // that still need our standard 48px height and focus ring.
+  bare?: boolean;
 };
 
 export const TextField = forwardRef<React.ElementRef<typeof Input>, TextFieldProps>(
-  function TextField({ label, helper, error, id, ...inputProps }, ref) {
+  function TextField({ label, helper, error, id, bare, ...inputProps }, ref) {
     const input = (
       <Input
         ref={ref}
@@ -48,6 +52,8 @@ export const TextField = forwardRef<React.ElementRef<typeof Input>, TextFieldPro
         {...inputProps}
       />
     );
+
+    if (bare) return input;
 
     return (
       <YStack gap="$2">

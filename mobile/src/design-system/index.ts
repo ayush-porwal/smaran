@@ -20,4 +20,6 @@ export * from './primitives/ErrorState';
 export * from './primitives/Toast';
 export * from './primitives/AvatarStack';
 export * from './primitives/Modal';
+export * from './primitives/Button';
 export * from './primitives/motion';
+export * from './hooks/useHideTabBar';

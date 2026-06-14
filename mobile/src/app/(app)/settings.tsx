@@ -1,11 +1,14 @@
 // Settings tab. Theme picker, account info, sign out. The "Sign in
 // with Google" button (when Cognito lands) will live here too.
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { YStack, XStack, View, Separator } from 'tamagui';
+import { YStack, XStack, View } from 'tamagui';
 import { SignOut, UserCircle } from 'phosphor-react-native';
 
 import {
   Heading,
+  Icon,
+  Modal,
   Pressable,
   Screen,
   Stack,
@@ -20,8 +23,10 @@ export default function SettingsScreen() {
   const toast = useToast();
   const { preference, setPreference } = useThemeControls();
   const { user } = useCurrentUser();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function onSignOut() {
+    setConfirmOpen(false);
     try {
       await signOut();
       toast.show({ kind: 'info', message: 'Signed out' });
@@ -57,7 +62,7 @@ export default function SettingsScreen() {
               alignItems="center"
               justifyContent="center"
             >
-              <UserCircle size={24} weight="regular" color="$textSecondary" />
+              <Icon icon={UserCircle} tone="textSecondary" size={24} weight="regular" />
             </View>
             <YStack flex={1}>
               <Text variant="heading.sm">{user?.name ?? 'Anonymous'}</Text>
@@ -65,6 +70,20 @@ export default function SettingsScreen() {
                 {user?.email ?? '—'}
               </Text>
             </YStack>
+            <Pressable
+              onPress={() => setConfirmOpen(true)}
+              accessibilityLabel="Sign out"
+            >
+              <View
+                width={40}
+                height={40}
+                borderRadius="$full"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Icon icon={SignOut} tone="danger" size={20} weight="regular" />
+              </View>
+            </Pressable>
           </Stack.Horizontal>
         </YStack>
 
@@ -80,10 +99,7 @@ export default function SettingsScreen() {
             overflow="hidden"
           >
             {(['light', 'dark', 'system'] as const).map((p, i) => (
-              <Pressable
-                key={p}
-                onPress={() => setPreference(p)}
-              >
+              <Pressable key={p} onPress={() => setPreference(p)}>
                 <XStack
                   alignItems="center"
                   justifyContent="space-between"
@@ -104,27 +120,17 @@ export default function SettingsScreen() {
             ))}
           </YStack>
         </YStack>
-
-        <YStack gap="$2" marginTop="auto">
-          <Pressable onPress={onSignOut}>
-            <XStack
-              backgroundColor="$bgSurface"
-              borderColor="$borderDefault"
-              borderWidth={1}
-              borderRadius="$md"
-              padding="$3"
-              alignItems="center"
-              justifyContent="center"
-              gap="$2"
-            >
-              <SignOut size={18} weight="regular" color="$danger" />
-              <Text variant="heading.sm" color="$danger">
-                Sign out
-              </Text>
-            </XStack>
-          </Pressable>
-        </YStack>
       </YStack>
+
+      <Modal
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Sign out?"
+        description="You'll need to sign in again to access your groups and lists."
+        primaryAction={{ label: 'Sign out', onPress: onSignOut }}
+        secondaryAction={{ label: 'Cancel', onPress: () => setConfirmOpen(false) }}
+        destructive
+      />
     </Screen>
   );
 }

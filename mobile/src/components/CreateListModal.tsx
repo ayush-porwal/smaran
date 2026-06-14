@@ -1,9 +1,9 @@
 // Modal for creating a new list inside a group. Captures name and
 // emoji; list color tracks the group's color so the UI is consistent.
 import { useState } from 'react';
-import { Input, Label, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 
-import { Modal, Pressable, Stack, Text, useToast } from '@/design-system';
+import { Modal, Pressable, Stack, Text, TextField, useToast } from '@/design-system';
 import { ApiError, createList, getGroup } from '@/lib/api';
 
 type CreateListModalProps = {
@@ -64,27 +64,14 @@ export function CreateListModal({
       secondaryAction={{ label: 'Cancel', onPress: () => onOpenChange(false) }}
     >
       <YStack gap="$4">
-        <YStack gap="$2">
-          <Label htmlFor="list-name">
-            <Text variant="label.md" color="$textSecondary">
-              Name
-            </Text>
-          </Label>
-          <Input
-            id="list-name"
-            value={name}
-            onChangeText={setName}
-            placeholder="Groceries, Packing, Reading list, …"
-            backgroundColor="$bgSurface"
-            borderColor="$borderDefault"
-            borderWidth={1}
-            borderRadius="$md"
-            paddingHorizontal="$3"
-            paddingVertical="$3"
-            fontSize="$5"
-            autoFocus
-          />
-        </YStack>
+        <TextField
+          id="list-name"
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Groceries, Packing, Reading list, …"
+          autoFocus
+        />
 
         <YStack gap="$2">
           <Text variant="label.md" color="$textSecondary">

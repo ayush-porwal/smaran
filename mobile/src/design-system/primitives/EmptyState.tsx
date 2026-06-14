@@ -4,8 +4,8 @@
 import { YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 
+import { Button } from './Button';
 import { Text } from './Text';
-import { Button } from 'tamagui';
 
 type EmptyStateProps = {
   icon?: ReactNode;
@@ -34,19 +34,11 @@ export function EmptyState({
         </Text>
       ) : null}
       {actionLabel && onAction ? (
-        <Button
-          marginTop="$4"
-          backgroundColor="$accent"
-          color="$textInverse"
-          fontWeight="600"
-          paddingHorizontal="$5"
-          paddingVertical="$3"
-          borderRadius="$md"
-          onPress={onAction}
-          pressStyle={{ backgroundColor: '$accentPressed' }}
-        >
-          {actionLabel}
-        </Button>
+        <YStack marginTop="$4">
+          <Button variant="filled" onPress={onAction}>
+            {actionLabel}
+          </Button>
+        </YStack>
       ) : null}
     </YStack>
   );

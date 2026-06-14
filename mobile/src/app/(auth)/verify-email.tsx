@@ -7,7 +7,9 @@ import { Envelope } from 'phosphor-react-native';
 
 import {
   Box,
+  Button,
   Heading,
+  Icon,
   Pressable,
   Screen,
   Text,
@@ -27,7 +29,7 @@ export default function VerifyEmailScreen() {
           alignItems="center"
           justifyContent="center"
         >
-          <Envelope size={36} weight="regular" color="$accent" />
+          <Icon icon={Envelope} tone="accent" size={36} weight="regular" />
         </Box>
 
         <YStack gap="$2" alignItems="center" maxWidth={320}>
@@ -39,18 +41,9 @@ export default function VerifyEmailScreen() {
           </Text>
         </YStack>
 
-        <Pressable onPress={() => router.replace('/(app)' as never)}>
-          <Box
-            backgroundColor="$accent"
-            borderRadius="$md"
-            paddingVertical="$4"
-            paddingHorizontal="$6"
-          >
-            <Text variant="heading.sm" color="$textInverse">
-              Continue
-            </Text>
-          </Box>
-        </Pressable>
+        <Button variant="filled" onPress={() => router.replace('/(app)' as never)}>
+          Continue
+        </Button>
 
         <Pressable onPress={() => router.back()}>
           <View paddingVertical="$2">

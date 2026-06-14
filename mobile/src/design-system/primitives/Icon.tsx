@@ -16,8 +16,6 @@
 import { useTheme } from 'tamagui';
 import type { ComponentType } from 'react';
 
-import { themes } from '../tamagui.config';
-
 // The icon component types from `phosphor-react-native`. We only need
 // the props that vary at the call site; everything else is forwarded.
 type PhosphorIcon = ComponentType<{
@@ -34,7 +32,13 @@ export type IconTone =
   | 'accentText'
   | 'danger'
   | 'success'
-  | 'warning';
+  | 'warning'
+  // Foreground tones for icons that sit ON a colored background (an
+  // accent or danger button, a pill, etc). These are intentionally
+  // theme-independent because the background color is also theme-
+  // independent — white-on-indigo should look the same in both modes.
+  | 'onAccent'
+  | 'onDanger';
 
 export type IconProps = {
   icon: PhosphorIcon;
@@ -44,15 +48,24 @@ export type IconProps = {
   color?: string;
 };
 
+const ON_COLOR_TONES: Record<string, string> = {
+  onAccent: '#FFFFFF',
+  onDanger: '#FFFFFF',
+};
+
 // `useTheme()` returns a map from token name to a `{ val, isVar, ... }`
 // object. For hex strings the `.val` is what we want to hand to SVG.
 function useIconColor(tone: IconTone, override?: string): string {
   if (override) return override;
+  if (ON_COLOR_TONES[tone]) return ON_COLOR_TONES[tone];
   const t = useTheme();
   // `t[tone]` is a token entry; `.val` is the resolved hex string.
   const entry = t[tone] as { val?: string } | string | undefined;
   if (typeof entry === 'string') return entry;
-  return entry?.val ?? themes.light[tone] ?? '#000000';
+  if (entry?.val) return entry.val;
+  // Fall back to the static `themes` map for the current scheme.
+  // The scheme resolution happens at the call site (`useResolvedScheme`).
+  return '#000000';
 }
 
 export function Icon({

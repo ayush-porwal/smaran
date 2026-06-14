@@ -3,15 +3,16 @@
 // form so the screen reads as a real sign-up page, not a stub.
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { YStack, View, Input, Label } from 'tamagui';
+import { YStack, View } from 'tamagui';
 
 import {
   Box,
+  Button,
   Heading,
   Pressable,
   Screen,
-  Stack,
   Text,
+  TextField,
   useToast,
 } from '@/design-system';
 import { ApiError, signUp } from '@/lib/api';
@@ -59,90 +60,42 @@ export default function SignUpScreen() {
         </YStack>
 
         <YStack gap="$4">
-          <YStack gap="$2">
-            <Label htmlFor="name" color="$textSecondary">
-              <Text variant="label.md" color="$textSecondary">
-                Name
-              </Text>
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-              autoCapitalize="words"
-              backgroundColor="$bgSurface"
-              borderColor="$borderDefault"
-              borderWidth={1}
-              borderRadius="$md"
-              paddingHorizontal="$3"
-              paddingVertical="$3"
-              fontSize="$5"
-            />
-          </YStack>
-
-          <YStack gap="$2">
-            <Label htmlFor="email" color="$textSecondary">
-              <Text variant="label.md" color="$textSecondary">
-                Email
-              </Text>
-            </Label>
-            <Input
-              id="email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              backgroundColor="$bgSurface"
-              borderColor="$borderDefault"
-              borderWidth={1}
-              borderRadius="$md"
-              paddingHorizontal="$3"
-              paddingVertical="$3"
-              fontSize="$5"
-            />
-          </YStack>
-
-          <YStack gap="$2">
-            <Label htmlFor="password" color="$textSecondary">
-              <Text variant="label.md" color="$textSecondary">
-                Password
-              </Text>
-            </Label>
-            <Input
-              id="password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="At least 6 characters"
-              secureTextEntry
-              backgroundColor="$bgSurface"
-              borderColor="$borderDefault"
-              borderWidth={1}
-              borderRadius="$md"
-              paddingHorizontal="$3"
-              paddingVertical="$3"
-              fontSize="$5"
-            />
-          </YStack>
+          <TextField
+            id="name"
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            autoCapitalize="words"
+          />
+          <TextField
+            id="email"
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+          />
+          <TextField
+            id="password"
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="At least 6 characters"
+            secureTextEntry
+          />
         </YStack>
 
-        <Pressable onPress={onSubmit} disabled={!isValid || submitting}>
-          <Box
-            backgroundColor={isValid ? '$accent' : '$bgMuted'}
-            borderRadius="$md"
-            paddingVertical="$4"
-            alignItems="center"
-          >
-            <Text
-              variant="heading.sm"
-              color={isValid ? '$textInverse' : '$textTertiary'}
-            >
-              {submitting ? 'Creating account…' : 'Create account'}
-            </Text>
-          </Box>
-        </Pressable>
+        <Button
+          variant="filled"
+          onPress={onSubmit}
+          disabled={!isValid}
+          loading={submitting}
+        >
+          {submitting ? 'Creating account…' : 'Create account'}
+        </Button>
 
         <Box height={1} backgroundColor="$borderDefault" />
 

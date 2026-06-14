@@ -1,10 +1,12 @@
 // ErrorState: drop-in for screens that failed to load. Distinct from
 // EmptyState because the user has experienced a failure, not an absence.
 // Shows a danger icon, an error message, and a retry button.
-import { YStack, Button } from 'tamagui';
-import { Warning } from 'phosphor-react-native';
+import { YStack } from 'tamagui';
 
+import { Button } from './Button';
+import { Icon } from './Icon';
 import { Text } from './Text';
+import { Warning } from 'phosphor-react-native';
 
 type ErrorStateProps = {
   title?: string;
@@ -19,7 +21,7 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <YStack flex={1} alignItems="center" justifyContent="center" gap="$3" paddingHorizontal="$6">
-      <Warning size={32} weight="regular" color="$danger" />
+      <Icon icon={Warning} tone="danger" size={32} weight="regular" />
       <Text variant="heading.md" textAlign="center">
         {title}
       </Text>
@@ -27,19 +29,11 @@ export function ErrorState({
         {message}
       </Text>
       {onRetry ? (
-        <Button
-          marginTop="$4"
-          backgroundColor="$accent"
-          color="$textInverse"
-          fontWeight="600"
-          paddingHorizontal="$5"
-          paddingVertical="$3"
-          borderRadius="$md"
-          onPress={onRetry}
-          pressStyle={{ backgroundColor: '$accentPressed' }}
-        >
-          Try again
-        </Button>
+        <YStack marginTop="$4">
+          <Button variant="filled" onPress={onRetry}>
+            Try again
+          </Button>
+        </YStack>
       ) : null}
     </YStack>
   );

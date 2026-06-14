@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Plus, Trash } from 'phosphor-react-native';
-import { Input, YStack, View, XStack } from 'tamagui';
+import { YStack, View, XStack } from 'tamagui';
 
 import {
   Checkable,
@@ -15,6 +15,7 @@ import {
   Screen,
   Stack,
   Text,
+  TextField,
   useToast,
 } from '@/design-system';
 import {
@@ -218,26 +219,14 @@ export default function ListDetailScreen() {
           borderTopWidth={1}
           backgroundColor="$bgSurface"
         >
-          <Input
+          <TextField
+            bare
             value={draft}
             onChangeText={setDraft}
             placeholder="Add an item…"
-            backgroundColor="$bgSurface"
-            borderColor="$borderDefault"
-            borderWidth={1}
-            borderRadius="$md"
-            paddingHorizontal="$4"
-            height={48}
-            fontSize="$5"
-            color="$textPrimary"
-            placeholderTextColor="$textTertiary"
             flex={1}
             onSubmitEditing={onAdd}
             returnKeyType="done"
-            focusStyle={{
-              borderColor: '$accent',
-              borderWidth: 2,
-            }}
           />
           <Pressable onPress={onAdd} disabled={!draft.trim() || submitting}>
             <View
