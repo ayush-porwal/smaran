@@ -34,7 +34,9 @@ export function ListItem({
       gap="$3"
       alignItems="center"
       backgroundColor="$bgSurface"
-      borderRadius="$md"
+      borderColor="$borderDefault"
+      borderWidth={1}
+      borderRadius="$lg"
       opacity={disabled ? 0.4 : 1}
     >
       {leading ? <View>{leading}</View> : null}

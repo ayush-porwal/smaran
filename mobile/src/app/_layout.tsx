@@ -10,7 +10,11 @@
 //   5. ToastProvider — mounts the global toast renderer. Sits inside
 //      the theme so toast colors are themed.
 //
-// Stack is the Expo Router stack; every screen uses it implicitly.
+// Global CSS: on web, loads Inter from Google Fonts and sets a sane
+// body font-family. On native the file is a no-op. See the file for
+// why we don't go through @tamagui/font-inter's bundled OTF on web.
+import '@/global.css';
+
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';

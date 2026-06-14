@@ -53,14 +53,14 @@ export default function GroupsHomeScreen() {
 
   return (
     <Screen>
-      <YStack flex={1} gap="$4">
-        <YStack gap="$1">
-          <Text variant="body.md" color="$textSecondary">
+      <YStack flex={1} gap="$6">
+        <YStack gap="$2">
+          <Text variant="label.sm" color="$textTertiary">
             {user ? `Hi, ${user.name.split(' ')[0]}` : 'Welcome'}
           </Text>
           <YStack flexDirection="row" alignItems="center" justifyContent="space-between">
             <Heading level={1}>Your groups</Heading>
-            <Pressable onPress={() => setCreateOpen(true)}>
+            <Pressable onPress={() => setCreateOpen(true)} accessibilityLabel="Create group">
               <View
                 width={40}
                 height={40}
@@ -69,7 +69,7 @@ export default function GroupsHomeScreen() {
                 alignItems="center"
                 justifyContent="center"
               >
-                <Plus size={20} weight="bold" color="$textInverse" />
+                <Plus size={20} weight="bold" color={'$textInverse' as never} />
               </View>
             </Pressable>
           </YStack>
@@ -84,13 +84,15 @@ export default function GroupsHomeScreen() {
             }}
           />
         ) : groups === null ? (
-          <Stack.Vertical gap="$2">
+          <Stack.Vertical gap="$3">
             {[0, 1, 2].map((i) => (
               <View
                 key={i}
-                height={64}
-                backgroundColor="$bgSubtle"
-                borderRadius="$md"
+                height={72}
+                backgroundColor="$bgSurface"
+                borderColor="$borderDefault"
+                borderWidth={1}
+                borderRadius="$lg"
                 opacity={0.6}
               />
             ))}
@@ -104,24 +106,24 @@ export default function GroupsHomeScreen() {
             onAction={() => setCreateOpen(true)}
           />
         ) : (
-          <Stack.Vertical gap="$2">
+          <Stack.Vertical gap="$3">
             {groups.map((g) => (
               <ListItem
                 key={g.id}
                 leading={
                   <View
-                    width={40}
-                    height={40}
-                    borderRadius="$md"
+                    width={44}
+                    height={44}
+                    borderRadius="$lg"
                     backgroundColor="$bgSubtle"
                     alignItems="center"
                     justifyContent="center"
                   >
-                    <Text fontSize={20}>{g.emoji}</Text>
+                    <Text fontSize={22}>{g.emoji}</Text>
                   </View>
                 }
                 title={g.name}
-                description={`${g.memberCount} ${g.memberCount === 1 ? 'member' : 'members'} · ${g.listCount} ${g.listCount === 1 ? 'list' : 'lists'}`}
+                description={`${g.memberCount} ${g.memberCount === 1 ? 'member' : 'members'}  ·  ${g.listCount} ${g.listCount === 1 ? 'list' : 'lists'}`}
                 onPress={() => router.push({ pathname: '/(app)/groups/[id]', params: { id: g.id } } as never)}
               />
             ))}

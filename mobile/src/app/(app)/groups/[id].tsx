@@ -91,14 +91,20 @@ export default function GroupDetailScreen() {
 
   return (
     <Screen>
-      <YStack flex={1} gap="$4">
+      <YStack flex={1} gap="$6">
         <Stack.Horizontal alignItems="center" justifyContent="space-between">
-          <Pressable onPress={() => router.back()}>
-            <View padding="$2">
-              <ArrowLeft size={22} weight="regular" color="$textPrimary" />
+          <Pressable onPress={() => router.back()} accessibilityLabel="Back">
+            <View
+              width={40}
+              height={40}
+              alignItems="center"
+              justifyContent="center"
+              borderRadius="$full"
+            >
+              <ArrowLeft size={22} weight="regular" color={'$textPrimary' as never} />
             </View>
           </Pressable>
-          <Pressable onPress={() => setCreateOpen(true)}>
+          <Pressable onPress={() => setCreateOpen(true)} accessibilityLabel="New list">
             <View
               width={40}
               height={40}
@@ -107,33 +113,35 @@ export default function GroupDetailScreen() {
               alignItems="center"
               justifyContent="center"
             >
-              <Plus size={20} weight="bold" color="$textInverse" />
+              <Plus size={20} weight="bold" color={'$textInverse' as never} />
             </View>
           </Pressable>
         </Stack.Horizontal>
 
-        <YStack gap="$2">
+        <YStack gap="$3">
           <View flexDirection="row" alignItems="center" gap="$3">
             <View
-              width={48}
-              height={48}
-              borderRadius="$md"
+              width={56}
+              height={56}
+              borderRadius="$lg"
               backgroundColor="$bgSubtle"
+              borderColor="$borderDefault"
+              borderWidth={1}
               alignItems="center"
               justifyContent="center"
             >
-              <Text fontSize={24}>{group.emoji}</Text>
+              <Text fontSize={28}>{group.emoji}</Text>
             </View>
             <YStack flex={1}>
               <Heading level={1}>{group.name}</Heading>
-              <Text variant="body.sm" color="$textSecondary">
-                {myRole === 'admin' ? 'You administer this group' : `Joined as member`}
+              <Text variant="body.sm" color="$textSecondary" marginTop="$1">
+                {myRole === 'admin' ? 'You administer this group' : 'Joined as member'}
               </Text>
             </YStack>
           </View>
 
-          <Stack.Horizontal alignItems="center" gap="$3" marginTop="$2">
-            <Users size={16} weight="regular" color="$textTertiary" />
+          <Stack.Horizontal alignItems="center" gap="$3" marginTop="$1">
+            <Users size={16} weight="regular" color={'$textTertiary' as never} />
             <AvatarStack members={members} max={4} size={24} />
             <Text variant="body.sm" color="$textTertiary">
               {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
@@ -151,24 +159,24 @@ export default function GroupDetailScreen() {
           />
         ) : (
           <ScrollView showsVerticalScrollIndicator={false}>
-            <YStack gap="$2">
+            <YStack gap="$3">
               {lists.map((l) => (
                 <ListItem
                   key={l.id}
                   leading={
                     <View
-                      width={40}
-                      height={40}
-                      borderRadius="$md"
+                      width={44}
+                      height={44}
+                      borderRadius="$lg"
                       backgroundColor="$bgSubtle"
                       alignItems="center"
                       justifyContent="center"
                     >
-                      <Text fontSize={20}>{l.emoji}</Text>
+                      <Text fontSize={22}>{l.emoji}</Text>
                     </View>
                   }
                   title={l.name}
-                  description={`${l.emoji === '🍽️' ? '' : ''}Updated ${formatRelative(l.updatedAt)}`}
+                  description={`Updated ${formatRelative(l.updatedAt)}`}
                   onPress={() => router.push({ pathname: '/(app)/lists/[id]', params: { id: l.id } } as never)}
                 />
               ))}

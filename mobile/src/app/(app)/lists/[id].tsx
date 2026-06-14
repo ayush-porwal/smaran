@@ -4,7 +4,7 @@
 // pattern. The composer at the bottom adds items via `addItem`.
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Plus } from 'phosphor-react-native';
+import { ArrowLeft, Plus, Trash } from 'phosphor-react-native';
 import { Input, YStack, View, XStack } from 'tamagui';
 
 import {
@@ -102,28 +102,42 @@ export default function ListDetailScreen() {
   return (
     <Screen padded={false}>
       <YStack flex={1}>
-        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$2">
-          <Pressable onPress={() => router.back()}>
-            <View padding="$2">
-              <ArrowLeft size={22} weight="regular" color="$textPrimary" />
+        <XStack
+          alignItems="center"
+          justifyContent="space-between"
+          paddingHorizontal="$4"
+          paddingVertical="$2"
+        >
+          <Pressable onPress={() => router.back()} accessibilityLabel="Back">
+            <View
+              width={40}
+              height={40}
+              alignItems="center"
+              justifyContent="center"
+              borderRadius="$full"
+            >
+              <ArrowLeft size={22} weight="regular" color={'$textPrimary' as never} />
             </View>
           </Pressable>
-          <Text variant="body.sm" color="$textTertiary">
-            {completed}/{total} done
+          <Text variant="label.sm" color="$textTertiary">
+            {completed} of {total} done
           </Text>
+          <View width={40} />
         </XStack>
 
-        <YStack paddingHorizontal="$4" gap="$1" marginBottom="$2">
+        <YStack paddingHorizontal="$4" gap="$1" marginBottom="$4">
           <XStack alignItems="center" gap="$3">
             <View
-              width={48}
-              height={48}
-              borderRadius="$md"
+              width={56}
+              height={56}
+              borderRadius="$lg"
               backgroundColor="$bgSubtle"
+              borderColor="$borderDefault"
+              borderWidth={1}
               alignItems="center"
               justifyContent="center"
             >
-              <Text fontSize={24}>{list.emoji}</Text>
+              <Text fontSize={28}>{list.emoji}</Text>
             </View>
             <YStack flex={1}>
               <Text variant="display.md">{list.name}</Text>
@@ -134,7 +148,12 @@ export default function ListDetailScreen() {
         <Stack.Vertical flex={1} paddingHorizontal="$4" gap="$1">
           {items.length === 0 ? (
             <FadeIn>
-              <Text variant="body.md" color="$textTertiary" textAlign="center" paddingVertical="$8">
+              <Text
+                variant="body.md"
+                color="$textTertiary"
+                textAlign="center"
+                paddingVertical="$8"
+              >
                 Nothing here yet. Add the first item below.
               </Text>
             </FadeIn>
@@ -148,7 +167,11 @@ export default function ListDetailScreen() {
                   paddingHorizontal="$2"
                   borderRadius="$md"
                 >
-                  <Pressable onPress={() => onToggle(item.id)}>
+                  <Pressable
+                    onPress={() => onToggle(item.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: item.checked }}
+                  >
                     <View
                       width={22}
                       height={22}
@@ -160,7 +183,7 @@ export default function ListDetailScreen() {
                       justifyContent="center"
                     >
                       {item.checked ? (
-                        <Text fontSize={14} fontWeight="700" color="$textInverse">
+                        <Text fontSize={14} fontWeight="700" color={'$textInverse' as never}>
                           ✓
                         </Text>
                       ) : null}
@@ -169,11 +192,12 @@ export default function ListDetailScreen() {
                   <YStack flex={1}>
                     <Checkable checked={item.checked}>{item.text}</Checkable>
                   </YStack>
-                  <Pressable onPress={() => onDelete(item.id)}>
-                    <View padding="$1">
-                      <Text variant="body.sm" color="$textTertiary">
-                        Delete
-                      </Text>
+                  <Pressable
+                    onPress={() => onDelete(item.id)}
+                    accessibilityLabel={`Delete ${item.text}`}
+                  >
+                    <View padding="$2">
+                      <Trash size={18} weight="regular" color={'$textTertiary' as never} />
                     </View>
                   </Pressable>
                 </XStack>
@@ -217,7 +241,11 @@ export default function ListDetailScreen() {
               alignItems="center"
               justifyContent="center"
             >
-              <Plus size={20} weight="bold" color={draft.trim() ? '$textInverse' : '$textTertiary'} />
+              <Plus
+                size={20}
+                weight="bold"
+                color={(draft.trim() ? '$textInverse' : '$textTertiary') as never}
+              />
             </View>
           </Pressable>
         </XStack>

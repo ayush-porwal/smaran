@@ -12,7 +12,7 @@ const id = (prefix: string, n: number) => `${prefix}_${n}`;
 const me: User = {
   id: 'user_me',
   email: 'you@smaran.app',
-  name: 'You',
+  name: 'Alex Chen',
   createdAt: '2026-01-15T09:00:00.000Z',
 };
 

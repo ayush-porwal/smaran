@@ -20,7 +20,7 @@ export function Heading({
 }: TextProps & { level?: HeadingLevel }) {
   return (
     <Text
-      accessibilityRole="header"
+      role="heading"
       variant={variant ?? levelToVariant[level]}
       {...props}
     />
