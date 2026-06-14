@@ -1,27 +1,33 @@
-import { useColorScheme } from 'react-native';
+// Root layout. Order of providers matters:
+//
+//   1. GestureHandlerRootView — required by react-native-gesture-handler
+//      for any Reanimated/gesture-driven work to mount.
+//   2. SafeAreaProvider — gives descendants access to safe-area insets.
+//   3. TamaguiProvider — supplies the theme + token config to the tree.
+//   4. ThemeProvider — loads the persisted preference, resolves the
+//      effective scheme, and renders <Theme name={...}>. Children only
+//      see a Theme-resolved tree, so `useTheme()` returns the right values.
+//   5. ToastProvider — mounts the global toast renderer. Sits inside
+//      the theme so toast colors are themed.
+//
+// Stack is the Expo Router stack; every screen uses it implicitly.
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
-import { TamaguiProvider, Theme } from 'tamagui';
+import { TamaguiProvider } from 'tamagui';
 
-import tamaguiConfig from '../../tamagui.config';
+import { ThemeProvider, ToastProvider, tamaguiConfig } from '@/design-system';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
-    // GestureHandlerRootView is required at the app root for any Reanimated/
-    // gesture-handler driven components to work. The style is a no-op but
-    // some platforms require the flex:1 to mount correctly.
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
-          {/* System-follow theme for now; manual override is added once the
-              ThemeProvider (with useResolvedScheme) lands in design-system. */}
-          <Theme name={colorScheme === 'dark' ? 'dark' : 'light'}>
-            <Stack screenOptions={{ headerShown: false }} />
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-          </Theme>
+          <ThemeProvider>
+            <ToastProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </ToastProvider>
+          </ThemeProvider>
         </TamaguiProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

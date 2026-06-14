@@ -323,47 +323,164 @@ Each ships in both modes and is fully typed.
 - **Screen reader:** every interactive element has an `accessibilityLabel`. Decorative icons have `accessibilityElementsHidden` / `importantForAccessibility="no"`.
 - **Focus order:** follows visual order, no tabindex tricks.
 
-## 12. Implementation layout
+## 13. Implementation layout
 
 ```
-src/
-  design-system/
-    tokens/
-      colors.ts        # indigo + neutral + semantic, light/dark
-      typography.ts    # type scale, weights, tracking
-      spacing.ts       # 4px scale
-      radii.ts
-      elevation.ts     # shadow strings
-      motion.ts        # springs, timings, easings
-    primitives/
-      Box.tsx Stack.tsx Screen.tsx Text.tsx Heading.tsx
-      Button.tsx Input.tsx TextArea.tsx Checkbox.tsx Switch.tsx
-      Card.tsx Sheet.tsx Modal.tsx
-      List.tsx ListItem.tsx
-      Skeleton.tsx Spinner.tsx Toast.tsx
-      EmptyState.tsx ErrorState.tsx
-      Avatar.tsx AvatarStack.tsx
-      motion.tsx       # FadeIn, Stagger, PressableScale, Checkable
-    index.ts           # public exports
-    theme/
-      ThemeProvider.tsx
-      useTheme.ts
-      useReducedMotion.ts
-      types.ts
-  app/                 # Expo Router routes
-  features/
-  lib/
-  amplify/
+mobile/
+  src/
+    design-system/
+      tamagui.config.ts     # createTamagui() with our tokens + themes
+      tokens/
+        colors.ts           # indigo + neutral + semantic, light/dark
+        typography.ts       # type scale, weights, tracking, font family
+        spacing.ts          # 4px scale
+        radii.ts
+        elevation.ts        # shadow strings
+        motion.ts           # springs, timings, easings
+      primitives/
+        Screen.tsx          # safe area + status bar + keyboard wrapper
+        Box.tsx             # token-only style API
+        Stack.tsx           # re-exports of XStack/YStack/ZStack with defaults
+        Text.tsx            # semantic variant prop mapping to type scale
+        Heading.tsx         # semantic heading levels
+        Pressable.tsx       # press-scale Reanimated animation
+        List.tsx            # FlashList wrapper with themed separators
+        ListItem.tsx        # leading/trailing slots, swipe actions
+        EmptyState.tsx      # icon + title + description + CTA
+        ErrorState.tsx
+        Toast.tsx           # success/error/info
+        AvatarStack.tsx     # overlapping, max 4 then +N
+        motion.tsx          # FadeIn, Stagger, PressableScale, Checkable
+        Modal.tsx           # our API over Tamagui's Dialog
+      theme/
+        ThemeProvider.tsx   # system-follow + manual override
+        useTheme.ts
+        useResolvedScheme.ts
+        types.ts
+      index.ts              # public exports
+    app/                    # Expo Router routes (src/app is the root)
+      _layout.tsx
+      (auth)/
+        sign-in.tsx
+        sign-up.tsx
+        verify-email.tsx
+      (app)/
+        _layout.tsx         # tab navigator
+        index.tsx           # groups list
+        groups/
+          [id]/
+            index.tsx       # group home (lists)
+            members.tsx
+            settings.tsx
+        lists/
+          [id].tsx          # list detail with items
+    features/               # feature-scoped state hooks + view models
+      auth/
+      groups/
+      lists/
+    lib/
+      api/                  # data layer; mock now, GraphQL later
+        types.ts            # User, Group, List, Item, Invite
+        mock.ts             # in-memory data + simulated latency
+        client.ts           # the swap point (mock or GraphQL)
+        index.ts            # re-exports
+      storage/              # AsyncStorage wrappers (session, prefs)
+      amplify/              # future: amplify_outputs.json, generated
+    components/             # cross-feature composites
+  app.json
+  babel.config.js
+  tamagui.config.ts -> re-exports src/design-system/tamagui.config.ts
+  tsconfig.json
+docs/
+  design-spec.md
+infra/                       # Phase 1: AWS CDK
+  bin/app.ts
+  lib/...
 ```
 
-Tokens are typed constants. The `ThemeProvider` resolves the active scheme
-(system or override) and exposes a `useTheme()` hook returning the
-semantic token map. Components consume tokens through this hook, never
-through raw `StyleSheet` literals.
+Tokens are typed constants exported from `tokens/`. `tamagui.config.ts`
+references them so a single source of truth flows from spec → runtime.
+The `ThemeProvider` resolves the active scheme (system or override) and
+exposes a `useTheme()` hook returning the semantic token map. Components
+consume tokens through this hook, never through raw `StyleSheet` literals.
 
-## 13. What is NOT in scope for the design system
+### Build order (this is the UI-first path)
+
+1. Tokens + `tamagui.config.ts` (so `<Text color="$textPrimary" />` works)
+2. `ThemeProvider` + `useResolvedScheme` (so manual override works)
+3. Custom primitives that Tamagui does not provide (`Screen`, `ListItem`, motion, etc.)
+4. `src/lib/api/` mock data layer with types
+5. Auth screens (sign-in, sign-up, verify-email) with mock auth state
+6. Groups screens (list, create, detail) reading/writing the mock layer
+7. Lists screens (group home, list detail) reading/writing the mock layer
+8. Reanimated-driven list mutations, swipe actions, animated check-off
+9. `npx expo start` to validate the full flow on a device
+
+After this lands we move to `infra/` and the swap from mock to GraphQL is
+a one-line change per call site because the API surface is the same.
+
+## 14. What is NOT in scope for the design system
 
 To keep Phase 0 focused, we will not build yet: date pickers, rich text
 editor, image picker/cropper, charts, map view, skeleton for complex
 shapes, custom illustrations. We will use platform defaults for these
 with custom theming where possible, and revisit in later phases.
+
+## 15. Backend (AWS) reference
+
+The mock data layer mirrors the eventual GraphQL schema. When the CDK
+stack is stood up in Phase 1, the swap from `lib/api/mock.ts` to
+`lib/api/graphql.ts` is a no-op for UI code.
+
+### 15.1 Services in scope
+
+| Service             | Why                                                              |
+| ------------------- | ---------------------------------------------------------------- |
+| **Cognito**         | User Pool for email/password auth, optional MFA                   |
+| **DynamoDB**        | Data store, 5 tables (see below), `PAY_PER_REQUEST` billing     |
+| **Lambda**          | Every read/write is a Lambda resolver; no direct DB access        |
+| **AppSync**         | GraphQL API + WebSocket subscriptions for real-time               |
+| **DynamoDB Streams**| Feeds AppSync subscriptions from item-level changes               |
+| **IAM**             | Roles + policies binding the above (CDK writes these for us)     |
+
+Later phases add: **SNS** (push notifications, Phase 4), **S3** (avatars,
+Phase 2+), **CloudFront** (when S3 traffic warrants it), **Cognito
+Identity Pool** (only if we want direct S3 uploads from clients).
+
+### 15.2 DynamoDB tables
+
+| Table              | PK          | SK          | GSIs                          | Notes                       |
+| ------------------ | ----------- | ----------- | ----------------------------- | --------------------------- |
+| `Groups`           | `groupId`   | -           | `byCreator` on `createdBy`    | name, emoji, color, createdAt |
+| `GroupMemberships` | `groupId`   | `userId`    | `byUser` on `userId`          | role, joinedAt              |
+| `Invites`          | `inviteId`  | -           | `byGroup`, `byEmail`          | status, expiresAt (TTL)     |
+| `Lists`            | `groupId`   | `listId`    | -                             | name, emoji, order          |
+| `ListItems`        | `listId`    | `itemId`    | -                             | text, checked, order        |
+
+- All tables: `PAY_PER_REQUEST`, point-in-time recovery on, encryption with AWS-managed keys.
+- `Lists` and `ListItems` get `NEW_AND_OLD_IMAGES` streams so AppSync subscriptions can publish the new state.
+- `Invites` gets TTL on `expiresAt` so expired codes auto-delete.
+
+### 15.3 CDK layout (Phase 1)
+
+```
+infra/
+  bin/app.ts             # CDK app entry, instantiates the stack
+  lib/smaran-stack.ts    # single stack: Cognito + AppSync + DynamoDB + Lambdas
+  lib/constructs/
+    auth.ts              # CognitoUserPool + Client
+    api.ts               # AppSync + schema + resolvers
+    data.ts              # DynamoDB tables
+    notifications.ts     # SNS topic (Phase 4)
+  cdk.json
+  package.json
+  tsconfig.json
+```
+
+One stack at this size. Split when deploy times start to bite.
+
+### 15.4 The swap
+
+`lib/api/client.ts` exports the typed surface. Today it imports from
+`mock.ts`; tomorrow it imports from `graphql.ts`. UI code only ever
+imports from `client.ts`, so the change is invisible above that line.

@@ -1,12 +1,6 @@
-import { createTamagui } from 'tamagui';
-import { config as defaultConfig } from '@tamagui/config';
-
-// Skeleton config: real tokens (indigo accent, full neutral scale, motion
-// mappings) land in src/design-system/tamagui.tokens.ts in the next step.
-// This file just proves the wiring works end-to-end.
-export const tamaguiConfig = createTamagui({
-  ...defaultConfig,
-  defaultTheme: 'light',
-});
-
-export default tamaguiConfig;
+// Re-exports the design-system config. The Tamagui babel plugin looks
+// for `tamagui.config.ts` at the project root by default, so this file
+// is the babel-side entry point. Runtime code (the TamaguiProvider in
+// app/_layout.tsx) imports directly from `src/design-system/tamagui.config.ts`
+// to keep the import path consistent with the rest of the app.
+export { tamaguiConfig as default, tamaguiConfig } from './src/design-system/tamagui.config';

@@ -23,6 +23,7 @@ node_modules/
 cdk.out/
 .cdk.staging/
 .expo/
+.tamagui/
 dist/
 web-build/
 
