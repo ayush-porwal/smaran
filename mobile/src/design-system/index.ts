@@ -9,6 +9,8 @@ export * from './primitives/Box';
 export * from './primitives/Stack';
 export * from './primitives/Text';
 export * from './primitives/Heading';
+export * from './primitives/TextField';
+export * from './primitives/Icon';
 export * from './primitives/Screen';
 export * from './primitives/Pressable';
 export * from './primitives/ListItem';

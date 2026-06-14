@@ -10,6 +10,7 @@ import { Input, YStack, View, XStack } from 'tamagui';
 import {
   Checkable,
   FadeIn,
+  Icon,
   Pressable,
   Screen,
   Stack,
@@ -116,7 +117,7 @@ export default function ListDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <ArrowLeft size={22} weight="regular" color={'$textPrimary' as never} />
+              <ArrowLeft size={22} weight="regular" color="$textPrimary" />
             </View>
           </Pressable>
           <Text variant="label.sm" color="$textTertiary">
@@ -183,7 +184,7 @@ export default function ListDetailScreen() {
                       justifyContent="center"
                     >
                       {item.checked ? (
-                        <Text fontSize={14} fontWeight="700" color={'$textInverse' as never}>
+                        <Text fontSize={14} fontWeight="700" color="#FFFFFF">
                           ✓
                         </Text>
                       ) : null}
@@ -197,7 +198,7 @@ export default function ListDetailScreen() {
                     accessibilityLabel={`Delete ${item.text}`}
                   >
                     <View padding="$2">
-                      <Trash size={18} weight="regular" color={'$textTertiary' as never} />
+                      <Icon icon={Trash} tone="textTertiary" size={18} weight="regular" />
                     </View>
                   </Pressable>
                 </XStack>
@@ -221,30 +222,37 @@ export default function ListDetailScreen() {
             value={draft}
             onChangeText={setDraft}
             placeholder="Add an item…"
-            backgroundColor="$bgSubtle"
-            borderColor="transparent"
-            borderWidth={0}
+            backgroundColor="$bgSurface"
+            borderColor="$borderDefault"
+            borderWidth={1}
             borderRadius="$md"
-            paddingHorizontal="$3"
-            paddingVertical="$3"
+            paddingHorizontal="$4"
+            height={48}
             fontSize="$5"
+            color="$textPrimary"
+            placeholderTextColor="$textTertiary"
             flex={1}
             onSubmitEditing={onAdd}
             returnKeyType="done"
+            focusStyle={{
+              borderColor: '$accent',
+              borderWidth: 2,
+            }}
           />
           <Pressable onPress={onAdd} disabled={!draft.trim() || submitting}>
             <View
-              width={44}
-              height={44}
+              width={48}
+              height={48}
               borderRadius="$full"
               backgroundColor={draft.trim() ? '$accent' : '$bgMuted'}
               alignItems="center"
               justifyContent="center"
             >
-              <Plus
+              <Icon
+                icon={Plus}
+                tone={draft.trim() ? 'accentText' : 'textTertiary'}
                 size={20}
                 weight="bold"
-                color={(draft.trim() ? '$textInverse' : '$textTertiary') as never}
               />
             </View>
           </Pressable>

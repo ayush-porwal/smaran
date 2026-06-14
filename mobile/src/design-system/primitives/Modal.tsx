@@ -64,7 +64,7 @@ export function Modal({
               {primaryAction ? (
                 <Button
                   backgroundColor={destructive ? '$danger' : '$accent'}
-                  color="$textInverse"
+                  color="#FFFFFF"
                   fontWeight="600"
                   paddingVertical="$3"
                   borderRadius="$md"

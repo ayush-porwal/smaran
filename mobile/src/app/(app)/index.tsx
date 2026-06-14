@@ -11,6 +11,7 @@ import {
   EmptyState,
   ErrorState,
   Heading,
+  Icon,
   ListItem,
   Pressable,
   Screen,
@@ -69,7 +70,7 @@ export default function GroupsHomeScreen() {
                 alignItems="center"
                 justifyContent="center"
               >
-                <Plus size={20} weight="bold" color={'$textInverse' as never} />
+                <Icon icon={Plus} tone="accentText" size={20} weight="bold" />
               </View>
             </Pressable>
           </YStack>

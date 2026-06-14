@@ -12,6 +12,7 @@ import {
   EmptyState,
   ErrorState,
   Heading,
+  Icon,
   ListItem,
   Pressable,
   Screen,
@@ -101,7 +102,7 @@ export default function GroupDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <ArrowLeft size={22} weight="regular" color={'$textPrimary' as never} />
+              <ArrowLeft size={22} weight="regular" color="$textPrimary" />
             </View>
           </Pressable>
           <Pressable onPress={() => setCreateOpen(true)} accessibilityLabel="New list">
@@ -113,7 +114,7 @@ export default function GroupDetailScreen() {
               alignItems="center"
               justifyContent="center"
             >
-              <Plus size={20} weight="bold" color={'$textInverse' as never} />
+              <Icon icon={Plus} tone="accentText" size={20} weight="bold" />
             </View>
           </Pressable>
         </Stack.Horizontal>
@@ -141,7 +142,7 @@ export default function GroupDetailScreen() {
           </View>
 
           <Stack.Horizontal alignItems="center" gap="$3" marginTop="$1">
-            <Users size={16} weight="regular" color={'$textTertiary' as never} />
+            <Icon icon={Users} tone="textTertiary" size={16} weight="regular" />
             <AvatarStack members={members} max={4} size={24} />
             <Text variant="body.sm" color="$textTertiary">
               {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}

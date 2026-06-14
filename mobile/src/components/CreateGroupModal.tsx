@@ -3,10 +3,10 @@
 // `createGroup` and emits the new group's id to the parent so it can
 // navigate to the new group's home.
 import { useState } from 'react';
-import { Input, Label, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 
-import { Modal, Pressable, Stack, Text, useToast } from '@/design-system';
-import { ApiError, createGroup, type Group, type GroupColor } from '@/lib/api';
+import { Modal, Pressable, Stack, Text, TextField, useToast } from '@/design-system';
+import { ApiError, createGroup, type GroupColor } from '@/lib/api';
 
 const COLORS: { value: GroupColor; bg: string }[] = [
   { value: 'indigo', bg: '#5B5FE9' },
@@ -63,27 +63,14 @@ export function CreateGroupModal({ open, onOpenChange, onCreated }: CreateGroupM
       secondaryAction={{ label: 'Cancel', onPress: () => onOpenChange(false) }}
     >
       <YStack gap="$4">
-        <YStack gap="$2">
-          <Label htmlFor="group-name">
-            <Text variant="label.md" color="$textSecondary">
-              Name
-            </Text>
-          </Label>
-          <Input
-            id="group-name"
-            value={name}
-            onChangeText={setName}
-            placeholder="Apartment, Trip to Lisbon, …"
-            backgroundColor="$bgSurface"
-            borderColor="$borderDefault"
-            borderWidth={1}
-            borderRadius="$md"
-            paddingHorizontal="$3"
-            paddingVertical="$3"
-            fontSize="$5"
-            autoFocus
-          />
-        </YStack>
+        <TextField
+          id="group-name"
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Apartment, Trip to Lisbon, …"
+          autoFocus
+        />
 
         <YStack gap="$2">
           <Text variant="label.md" color="$textSecondary">
@@ -127,7 +114,7 @@ export function CreateGroupModal({ open, onOpenChange, onCreated }: CreateGroupM
                   justifyContent="center"
                 >
                   {color === c.value ? (
-                    <Text color="$textInverse" fontSize={14} fontWeight="700">
+                    <Text color="#FFFFFF" fontSize={14} fontWeight="700">
                       ✓
                     </Text>
                   ) : null}
