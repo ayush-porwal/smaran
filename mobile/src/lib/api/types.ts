@@ -1,0 +1,136 @@
+// Domain types. These mirror the eventual AppSync / GraphQL schema in
+// docs/design-spec.md section 15.2. When we swap from `lib/api/mock.ts`
+// to `lib/api/graphql.ts`, the imports here stay unchanged — only the
+// implementation behind the API surface moves.
+
+export type ID = string;
+export type ISODateString = string;
+
+// Users
+export type User = {
+  id: ID;
+  email: string;
+  name: string;
+  createdAt: ISODateString;
+};
+
+// Groups
+export type GroupColor = 'indigo' | 'violet' | 'rose' | 'amber' | 'emerald' | 'sky';
+
+export type Group = {
+  id: ID;
+  name: string;
+  emoji: string;
+  color: GroupColor;
+  createdBy: ID;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+};
+
+export type Role = 'admin' | 'member';
+
+export type GroupMembership = {
+  groupId: ID;
+  userId: ID;
+  role: Role;
+  joinedAt: ISODateString;
+};
+
+export type GroupWithMeta = Group & {
+  role: Role;
+  memberCount: number;
+  listCount: number;
+};
+
+// Invites
+export type InviteStatus = 'pending' | 'accepted' | 'expired';
+
+export type Invite = {
+  id: ID;
+  groupId: ID;
+  email: string;
+  invitedBy: ID;
+  status: InviteStatus;
+  createdAt: ISODateString;
+  expiresAt: ISODateString;
+};
+
+// Lists (and items)
+export type List = {
+  id: ID;
+  groupId: ID;
+  name: string;
+  emoji: string;
+  createdBy: ID;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  // Order within a group. We don't use fractional indexing yet; positions
+  // are sparse integers so inserts are cheap (max + 1).
+  order: number;
+};
+
+export type ListItem = {
+  id: ID;
+  listId: ID;
+  text: string;
+  checked: boolean;
+  addedBy: ID;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  order: number;
+};
+
+// Auth
+export type AuthSession = {
+  user: User;
+  // In real life this is a Cognito JWT; for the mock we keep the user
+  // and a synthetic token so consumers can attach it to requests.
+  token: string;
+};
+
+export type SignUpInput = {
+  email: string;
+  password: string;
+  name: string;
+};
+
+export type SignInInput = {
+  email: string;
+  password: string;
+};
+
+// Inputs
+export type CreateGroupInput = {
+  name: string;
+  emoji: string;
+  color: GroupColor;
+};
+
+export type CreateListInput = {
+  groupId: ID;
+  name: string;
+  emoji: string;
+};
+
+export type AddItemInput = {
+  listId: ID;
+  text: string;
+};
+
+// Errors
+export type ApiErrorCode =
+  | 'unauthenticated'
+  | 'not_found'
+  | 'forbidden'
+  | 'validation'
+  | 'conflict'
+  | 'network';
+
+export class ApiError extends Error {
+  code: ApiErrorCode;
+  constructor(code: ApiErrorCode, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'ApiError';
+  }
+}

@@ -1,0 +1,227 @@
+// List detail. Renders items in a FlashList-backed List. Tapping the
+// leading checkbox toggles the item via `toggleItem`; the row animates
+// the strike-through and dim transition from the `Checkable` motion
+// pattern. The composer at the bottom adds items via `addItem`.
+import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Plus } from 'phosphor-react-native';
+import { Input, YStack, View, XStack } from 'tamagui';
+
+import {
+  Checkable,
+  FadeIn,
+  Pressable,
+  Screen,
+  Stack,
+  Text,
+  useToast,
+} from '@/design-system';
+import {
+  addItem,
+  ApiError,
+  deleteItem,
+  getList,
+  itemsInList,
+  toggleItem,
+  type List as ListModel,
+  type ListItem as ListItemModel,
+} from '@/lib/api';
+import { useStoreVersion } from '@/lib/api/useStoreVersion';
+
+export default function ListDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const toast = useToast();
+  const listVersion = useStoreVersion(`list:${id ?? ''}`);
+
+  const [list, setList] = useState<ListModel | null>(null);
+  const [items, setItems] = useState<ListItemModel[]>([]);
+  const [draft, setDraft] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    Promise.all([getList(id), itemsInList(id)])
+      .then(([l, its]) => {
+        if (cancelled) return;
+        setList(l);
+        setItems(its);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, listVersion, toast]);
+
+  const onAdd = useCallback(async () => {
+    if (!id || !draft.trim()) return;
+    setSubmitting(true);
+    try {
+      await addItem({ listId: id, text: draft.trim() });
+      setDraft('');
+    } catch (err) {
+      toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [id, draft, toast]);
+
+  const onToggle = useCallback(
+    async (itemId: string) => {
+      try {
+        await toggleItem(itemId);
+      } catch (err) {
+        toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+      }
+    },
+    [toast],
+  );
+
+  const onDelete = useCallback(
+    async (itemId: string) => {
+      try {
+        await deleteItem(itemId);
+      } catch (err) {
+        toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+      }
+    },
+    [toast],
+  );
+
+  if (!list) {
+    return <Screen><Text>Loading…</Text></Screen>;
+  }
+
+  const completed = items.filter((i) => i.checked).length;
+  const total = items.length;
+
+  return (
+    <Screen padded={false}>
+      <YStack flex={1}>
+        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$2">
+          <Pressable onPress={() => router.back()}>
+            <View padding="$2">
+              <ArrowLeft size={22} weight="regular" color="$textPrimary" />
+            </View>
+          </Pressable>
+          <Text variant="body.sm" color="$textTertiary">
+            {completed}/{total} done
+          </Text>
+        </XStack>
+
+        <YStack paddingHorizontal="$4" gap="$1" marginBottom="$2">
+          <XStack alignItems="center" gap="$3">
+            <View
+              width={48}
+              height={48}
+              borderRadius="$md"
+              backgroundColor="$bgSubtle"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Text fontSize={24}>{list.emoji}</Text>
+            </View>
+            <YStack flex={1}>
+              <Text variant="display.md">{list.name}</Text>
+            </YStack>
+          </XStack>
+        </YStack>
+
+        <Stack.Vertical flex={1} paddingHorizontal="$4" gap="$1">
+          {items.length === 0 ? (
+            <FadeIn>
+              <Text variant="body.md" color="$textTertiary" textAlign="center" paddingVertical="$8">
+                Nothing here yet. Add the first item below.
+              </Text>
+            </FadeIn>
+          ) : (
+            items.map((item, idx) => (
+              <FadeIn key={item.id} delay={idx * 24}>
+                <XStack
+                  alignItems="center"
+                  gap="$3"
+                  paddingVertical="$3"
+                  paddingHorizontal="$2"
+                  borderRadius="$md"
+                >
+                  <Pressable onPress={() => onToggle(item.id)}>
+                    <View
+                      width={22}
+                      height={22}
+                      borderRadius="$sm"
+                      borderColor={item.checked ? '$accent' : '$borderStrong'}
+                      borderWidth={1.5}
+                      backgroundColor={item.checked ? '$accent' : 'transparent'}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      {item.checked ? (
+                        <Text fontSize={14} fontWeight="700" color="$textInverse">
+                          ✓
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                  <YStack flex={1}>
+                    <Checkable checked={item.checked}>{item.text}</Checkable>
+                  </YStack>
+                  <Pressable onPress={() => onDelete(item.id)}>
+                    <View padding="$1">
+                      <Text variant="body.sm" color="$textTertiary">
+                        Delete
+                      </Text>
+                    </View>
+                  </Pressable>
+                </XStack>
+              </FadeIn>
+            ))
+          )}
+        </Stack.Vertical>
+
+        {/* Composer */}
+        <XStack
+          alignItems="center"
+          gap="$2"
+          paddingHorizontal="$4"
+          paddingTop="$3"
+          paddingBottom="$4"
+          borderTopColor="$borderDefault"
+          borderTopWidth={1}
+          backgroundColor="$bgSurface"
+        >
+          <Input
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Add an item…"
+            backgroundColor="$bgSubtle"
+            borderColor="transparent"
+            borderWidth={0}
+            borderRadius="$md"
+            paddingHorizontal="$3"
+            paddingVertical="$3"
+            fontSize="$5"
+            flex={1}
+            onSubmitEditing={onAdd}
+            returnKeyType="done"
+          />
+          <Pressable onPress={onAdd} disabled={!draft.trim() || submitting}>
+            <View
+              width={44}
+              height={44}
+              borderRadius="$full"
+              backgroundColor={draft.trim() ? '$accent' : '$bgMuted'}
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Plus size={20} weight="bold" color={draft.trim() ? '$textInverse' : '$textTertiary'} />
+            </View>
+          </Pressable>
+        </XStack>
+      </YStack>
+    </Screen>
+  );
+}
