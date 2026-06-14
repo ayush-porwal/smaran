@@ -1,0 +1,7 @@
+{
+  "envCode": "local",
+  "userPoolId": "",
+  "userPoolClientId": "",
+  "hostedUiDomain": "",
+  "graphqlEndpoint": ""
+}

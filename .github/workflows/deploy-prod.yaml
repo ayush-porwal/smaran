@@ -1,0 +1,135 @@
+name: deploy-prod
+
+# `workflow_dispatch` only. No push trigger. Production deploys
+# require a human to click the button in the Actions tab (or run
+# `gh workflow run deploy-prod.yaml`), and the `production`
+# environment has required reviewers configured in the GitHub UI
+# to enforce that gate.
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you deploying to prod? (commit SHA, ticket, etc.)"
+        required: true
+        type: string
+
+jobs:
+  diff:
+    name: cdk diff prod
+    runs-on: ubuntu-latest
+    # The diff step is the LAST line of defence. It always runs and
+    # # must be reviewed before the deploy step is allowed to proceed.
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume prod role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::916657620124:role/github-actions-smaran-deploy
+          aws-region: eu-central-1
+          role-session-name: smaran-prod-diff-${{ github.sha }}
+
+      - name: cdk diff
+        run: npx cdk diff smaran-production-eu-central-1
+        env:
+          CDK_DEFAULT_ACCOUNT: "916657620124"
+          CDK_DEFAULT_REGION: eu-central-1
+
+  deploy:
+    name: cdk deploy prod
+    needs: diff
+    runs-on: ubuntu-latest
+    environment:
+      # The required-reviewer gate lives on this environment. Configure
+      # it under Settings → Environments → production → Required
+      # reviewers. The diff job runs in the same environment, so the
+      # diff output is visible in the same view.
+      name: production
+    defaults:
+      run:
+        working-directory: infra
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume prod role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::916657620124:role/github-actions-smaran-deploy
+          aws-region: eu-central-1
+          role-session-name: smaran-prod-deploy-${{ github.sha }}
+
+      - name: cdk deploy
+        run: npx cdk deploy smaran-production-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
+        env:
+          CDK_DEFAULT_ACCOUNT: "916657620124"
+          CDK_DEFAULT_REGION: eu-central-1
+
+      - name: Expose prod outputs
+        if: success()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "## Prod outputs" >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write mobile config
+        if: success()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const o = JSON.parse(fs.readFileSync("cdk-outputs.json", "utf8"));
+            const s = o["smaran-production-eu-central-1"];
+            if (!s) { console.error("no stack output"); process.exit(1); }
+            const cfg = {
+              envCode: "prod",
+              userPoolId: s["UserPoolId"],
+              userPoolClientId: s["UserPoolClientId"],
+              hostedUiDomain: s["HostedUiDomain"],
+              graphqlEndpoint: s["GraphQLEndpoint"],
+            };
+            fs.mkdirSync("../mobile/config", { recursive: true });
+            fs.writeFileSync("../mobile/config/prod.json", JSON.stringify(cfg, null, 2));
+            console.log("wrote mobile/config/prod.json", cfg);
+          '

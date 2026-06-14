@@ -1,0 +1,77 @@
+name: destroy-sandbox
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+# No concurrency group: destroying a closed PR is a one-shot, and
+# multiple destroys for the same PR (e.g. close + reopen + close) are
+# idempotent on a missing stack.
+
+jobs:
+  destroy:
+    name: destroy pr-${{ github.event.pull_request.number }}
+    runs-on: ubuntu-latest
+    # Skip if the PR was merged — staging deploys on push-to-main, and
+    # the sandbox stack was already torn down as part of the close.
+    if: github.event.pull_request.merged == false
+    defaults:
+      run:
+        working-directory: infra
+    environment: sandbox
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume sandbox role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::219602461448:role/github-actions-smaran-deploy
+          aws-region: eu-central-1
+          role-session-name: smaran-sandbox-destroy-pr-${{ github.event.pull_request.number }}
+
+      # Use `--force` to skip the confirm prompt. The role's IAM
+      # policy is the actual safety net (only the GitHub workflow can
+      # assume it; only this workflow runs in the sandbox environment).
+      - name: cdk destroy
+        run: |
+          CDK_STACK_PREFIX="pr${{ github.event.pull_request.number }}" \
+            npx cdk destroy \
+              pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1 \
+              --force
+        env:
+          CDK_DEFAULT_ACCOUNT: "219602461448"
+          CDK_DEFAULT_REGION: eu-central-1
+
+      - name: Confirm stack is gone
+        # Belt-and-braces: if cdk destroy succeeded but the stack
+        # somehow still exists (e.g. a non-empty S3 bucket blocked
+        # delete), surface it. Retention policies in the stack
+        # already guard against this for prod-style resources, so a
+        # leftover stack here means something leaked.
+        run: |
+          STACK="pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1"
+          if aws cloudformation describe-stacks --stack-name "$STACK" >/dev/null 2>&1; then
+            echo "::error::Stack $STACK still exists after destroy"
+            exit 1
+          fi
+          echo "Stack $STACK successfully deleted"

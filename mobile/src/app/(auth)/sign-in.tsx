@@ -1,42 +1,45 @@
-// Sign-in screen. In the mock, we surface the seeded users as a list
-// and the user picks one to "sign in" as. The real flow (when the
-// CDK stack lands) will replace this list with an email/password form
-// wired to Cognito via the same `signIn` API.
+// Sign-in screen. The only flow is "Continue with Google" — the
+// app opens the Cognito hosted UI in the browser, the user signs
+// in with Google, and the deep-link callback exchanges the code
+// for tokens.
 import { useState } from 'react';
+import { XStack, YStack } from 'tamagui';
+import { GoogleLogo } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
-import { ScrollView, YStack, View } from 'tamagui';
 
 import {
   Box,
+  Button,
   Heading,
-  ListItem,
-  Pressable,
+  Icon,
   Screen,
-  Stack,
   Text,
   useToast,
 } from '@/design-system';
-import { ApiError, signIn, store } from '@/lib/api';
+import { signIn as cognitoSignIn } from '@/lib/auth';
+import { ApiError } from '@/lib/api';
+import { isConfigured } from '@/lib/config';
 
 export default function SignInScreen() {
   const router = useRouter();
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const ready = isConfigured();
 
-  // Snapshot the seeded users at mount. In real life the form would
-  // collect email/password, but for the mock we just enumerate.
-  const users = [...store.users.values()];
-
-  async function signInAs(userId: string) {
+  async function onSignIn() {
+    if (!ready) {
+      toast.show({
+        kind: 'error',
+        message: 'App is not configured for this build. Run the deploy workflow first.',
+      });
+      return;
+    }
     setSubmitting(true);
     try {
-      const user = store.users.get(userId);
-      if (!user) throw new ApiError('not_found', 'User missing');
-      await signIn({ email: user.email, password: 'mock' });
-      toast.show({ kind: 'success', message: `Signed in as ${user.name}` });
+      await cognitoSignIn();
       router.replace('/(app)' as never);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Sign in failed';
+      const message = err instanceof ApiError ? err.message : 'Sign in failed';
       toast.show({ kind: 'error', message });
     } finally {
       setSubmitting(false);
@@ -44,42 +47,46 @@ export default function SignInScreen() {
   }
 
   return (
-    <Screen>
-      <YStack flex={1} gap="$6" paddingTop="$8">
-        <YStack gap="$2">
-          <Heading level={1}>Sign in</Heading>
-          <Text variant="body.md" color="$textSecondary">
-            Pick a seeded user to sign in as. (Real auth ships with Phase 1.)
+    <Screen keyboardAvoid>
+      <YStack flex={1} gap="$6" paddingTop="$8" justifyContent="center">
+        <YStack gap="$2" alignItems="center">
+          <Box
+            width={80}
+            height={80}
+            borderRadius="$full"
+            backgroundColor="$accentSubtle"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Text fontSize={36}>✓</Text>
+          </Box>
+          <Heading level={1} textAlign="center">
+            Smaran
+          </Heading>
+          <Text variant="body.md" color="$textSecondary" textAlign="center">
+            Share lists with people you trust.
           </Text>
         </YStack>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack gap="$2">
-            {users.map((u) => (
-              <ListItem
-                key={u.id}
-                title={u.name}
-                description={u.email}
-                onPress={() => signInAs(u.id)}
-                disabled={submitting}
-              />
-            ))}
-          </YStack>
-        </ScrollView>
-
-        <Box height={1} backgroundColor="$borderDefault" />
-
-        <YStack gap="$3" alignItems="center">
-          <Text variant="body.sm" color="$textTertiary">
-            Don't have an account?
-          </Text>
-          <Pressable onPress={() => router.push('/(auth)/sign-up' as never)}>
-            <View paddingVertical="$2" paddingHorizontal="$4">
-              <Text variant="label.md" color="$accent">
-                Create one
+        <YStack gap="$3" marginTop="$8">
+          <Button
+            variant="filled"
+            onPress={onSignIn}
+            loading={submitting}
+            disabled={!ready}
+          >
+            <XStack alignItems="center" gap="$2">
+              <Icon icon={GoogleLogo} tone="accentText" size={20} weight="regular" />
+              <Text variant="label.md" color="$accentText" fontWeight="600">
+                {submitting ? 'Opening Google…' : 'Continue with Google'}
               </Text>
-            </View>
-          </Pressable>
+            </XStack>
+          </Button>
+          {!ready ? (
+            <Text variant="body.sm" color="$danger" textAlign="center">
+              Missing build config. Re-run the deploy workflow.
+            </Text>
+          ) : null}
         </YStack>
       </YStack>
     </Screen>

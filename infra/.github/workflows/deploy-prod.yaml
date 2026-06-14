@@ -1,0 +1,104 @@
+name: deploy-prod
+
+on:
+  # PROD IS MANUAL-ONLY. No `push:` trigger, ever.
+  # To deploy: Actions tab → "deploy-prod" → Run workflow → pick
+  # the ref (typically `main`) → confirm. The environment's
+  # required reviewers (configured in GitHub repo Settings →
+  # Environments → production) get an email + must approve before
+  # the job actually runs.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "git ref to deploy (branch or SHA)"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+# Sequential prod deploys — one at a time, never cancel.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  diff:
+    name: cdk diff (smaran-production)
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      AWS_ROLE_TO_ASSUME: arn:aws:iam::916657620124:role/github-actions-smaran-deploy
+      AWS_REGION: eu-central-1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+      - name: Install
+        run: npm ci
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Diff
+        # Diff is its own job so the change set is reviewable in
+        # the Actions UI before the deploy job fires.
+        run: npx cdk diff smaran-production-eu-central-1
+
+  deploy:
+    name: deploy smaran-production
+    runs-on: ubuntu-latest
+    needs: diff
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      AWS_ROLE_TO_ASSUME: arn:aws:iam::916657620124:role/github-actions-smaran-deploy
+      AWS_REGION: eu-central-1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+      - name: Install
+        run: npm ci
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Deploy
+        # `require-approval: any-change` so even the prod bot has
+        # to OK IAM/Cognito changes (these are the kinds of
+        # changes you want a human eyeball on in prod).
+        run: |
+          npx cdk deploy \
+            smaran-production-eu-central-1 \
+            --require-approval any-change \
+            --outputs-file cdk-outputs.json

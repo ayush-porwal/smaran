@@ -1,15 +1,15 @@
-// Convenience hook for the current user. Returns `{ user, loading }`
-// and re-fetches when the session topic changes (sign-in / sign-out).
+// Hook returning the current Cognito user. The session state is
+// mirrored to a Zustand-like module variable (see `session.ts`)
+// so screens re-render on sign-in / sign-out.
 import { useEffect, useState } from 'react';
 
-import { getCurrentUser } from './mock';
+import { getCurrentUser } from '../auth';
+import { subscribeSession } from './session';
 import type { User } from './types';
-import { useStoreVersion } from './useStoreVersion';
 
 export function useCurrentUser(): { user: User | null; loading: boolean } {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const sessionVersion = useStoreVersion('session');
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -24,9 +24,21 @@ export function useCurrentUser(): { user: User | null; loading: boolean } {
         setUser(null);
         setLoading(false);
       });
+    const unsub = subscribeSession(() => {
+      getCurrentUser()
+        .then((u) => {
+          if (cancelled) return;
+          setUser(u);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setUser(null);
+        });
+    });
     return () => {
       cancelled = true;
+      unsub();
     };
-  }, [sessionVersion]);
+  }, []);
   return { user, loading };
 }

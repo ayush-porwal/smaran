@@ -1,0 +1,103 @@
+name: deploy-sandbox
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+# Per-PR concurrency: only one deploy runs per PR at a time, and a
+# fresh push cancels the previous in-flight one.
+concurrency:
+  group: deploy-sandbox-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: deploy ${{ github.event.pull_request.number || 'manual' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    environment: sandbox
+    permissions:
+      contents: read
+      id-token: write # required for OIDC
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      # Assume into the sandbox account via OIDC. The role's trust
+      # policy restricts which repo + which branch + which workflow
+      # can assume it.
+      - name: Assume sandbox role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::219602461448:role/github-actions-smaran-deploy
+          aws-region: eu-central-1
+          role-session-name: smaran-sandbox-pr-${{ github.event.pull_request.number }}
+
+      - name: Resolve PR number
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=manual" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: cdk deploy
+        run: |
+          CDK_STACK_PREFIX="pr${{ steps.pr.outputs.number }}" \
+            npx cdk deploy \
+              pr${{ steps.pr.outputs.number }}-smaran-sandbox-eu-central-1 \
+              --require-approval never \
+              --outputs-file cdk-outputs.json
+        env:
+          CDK_DEFAULT_ACCOUNT: "219602461448"
+          CDK_DEFAULT_REGION: eu-central-1
+
+      - name: Expose sandbox outputs
+        if: success()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "## Sandbox outputs" >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write mobile config
+        if: success()
+        run: |
+          PR=${{ steps.pr.outputs.number }}
+          STACK="pr${PR}-smaran-sandbox-eu-central-1"
+          node -e "
+            const fs = require('fs');
+            const o = JSON.parse(fs.readFileSync('cdk-outputs.json', 'utf8'));
+            const s = o['$STACK'];
+            if (!s) { console.error('no stack output'); process.exit(1); }
+            const cfg = {
+              envCode: 'pr',
+              userPoolId: s['UserPoolId'],
+              userPoolClientId: s['UserPoolClientId'],
+              hostedUiDomain: s['HostedUiDomain'],
+              graphqlEndpoint: s['GraphQLEndpoint'],
+            };
+            fs.mkdirSync('../mobile/config', { recursive: true });
+            fs.writeFileSync(\"../mobile/config/pr-\${PR}.json\", JSON.stringify(cfg, null, 2));
+            console.log('wrote mobile/config/pr-' + $PR + '.json', cfg);
+          "

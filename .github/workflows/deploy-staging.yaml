@@ -1,0 +1,80 @@
+name: deploy-staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# No concurrency group: pushes to main are serial anyway, and
+# rerunning the workflow on the same SHA is a deliberate retry.
+
+jobs:
+  deploy:
+    name: deploy staging
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume staging role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::139316820779:role/github-actions-smaran-deploy
+          aws-region: eu-central-1
+          role-session-name: smaran-staging-${{ github.sha }}
+
+      - name: cdk deploy
+        run: npx cdk deploy smaran-staging-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
+        env:
+          CDK_DEFAULT_ACCOUNT: "139316820779"
+          CDK_DEFAULT_REGION: eu-central-1
+
+      - name: Expose staging outputs
+        if: success()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "## Staging outputs" >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write mobile config
+        if: success()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const o = JSON.parse(fs.readFileSync("cdk-outputs.json", "utf8"));
+            const s = o["smaran-staging-eu-central-1"];
+            if (!s) { console.error("no stack output"); process.exit(1); }
+            const cfg = {
+              envCode: "staging",
+              userPoolId: s["UserPoolId"],
+              userPoolClientId: s["UserPoolClientId"],
+              hostedUiDomain: s["HostedUiDomain"],
+              graphqlEndpoint: s["GraphQLEndpoint"],
+            };
+            fs.mkdirSync("../mobile/config", { recursive: true });
+            fs.writeFileSync("../mobile/config/staging.json", JSON.stringify(cfg, null, 2));
+            console.log("wrote mobile/config/staging.json", cfg);
+          '

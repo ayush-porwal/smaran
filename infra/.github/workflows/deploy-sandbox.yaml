@@ -1,0 +1,93 @@
+name: deploy-sandbox
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "infra/**"
+      - ".github/workflows/deploy-sandbox.yaml"
+      - ".github/workflows/destroy-sandbox.yaml"
+  workflow_dispatch:
+
+# Least-privilege: deploys need to assume into the SANDBOX account
+# via OIDC. The `id-token: write` permission is required to mint a
+# GitHub OIDC token; the actual role is in AWS.
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+# One sandbox deploy per PR at a time. If a new commit lands we
+# cancel the previous run and start a new one against the same
+# stack name (`pr{N}-smaran-sandbox-…`) so we don't pile up
+# concurrent cdk deploys against the same stack.
+concurrency:
+  group: deploy-sandbox-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: deploy pr-${{ github.event.pull_request.number }}-smaran-sandbox
+    runs-on: ubuntu-latest
+    environment: sandbox
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      CDK_STACK_PREFIX: pr-${{ github.event.pull_request.number }}
+      # OIDC role in the SANDBOX account.
+      AWS_ROLE_TO_ASSUME: arn:aws:iam::219602461448:role/github-actions-smaran-deploy
+      AWS_REGION: eu-central-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Synth (sanity check)
+        run: npx cdk synth pr-${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1 --quiet
+
+      - name: Deploy
+        # `require-approval: never` so the bot doesn't stall on the
+        # IAM/Cognito diffs that fire on first deploy.
+        # `outputs-file` writes the stack outputs (none yet in
+        # Phase 1) to a file we could echo in a PR comment later.
+        run: |
+          npx cdk deploy \
+            pr-${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1 \
+            --require-approval never \
+            --outputs-file cdk-outputs.json
+
+      - name: Comment on PR with stack outputs
+        # Phase 1 has no outputs yet, but the scaffolding is in
+        # place — once Phase 3+ lands, the Cognito user pool ID,
+        # AppSync endpoint, etc. will surface here.
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: aws-sandbox
+          message: |
+            Stack: `pr-${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1`
+            Status: ${{ job.status }}
+            Outputs:
+            ```json
+            ${{ toJson(job.steps.deploy.outputs) }}
+            ```

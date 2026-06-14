@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Minimal permissions; jobs request what they need via `permissions:` blocks.
+permissions:
+  contents: read
+
+# Cancel in-flight runs of the same workflow on the same PR/branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build, test, synth
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npx jest --ci
+
+      # `cdk synth` is the cheapest end-to-end check we can do without
+      # AWS credentials. On PRs this catches missing imports, broken
+      # cross-stack references, and CDK type errors.
+      - name: cdk synth
+        run: npx cdk synth --quiet
+        env:
+          # `cdk synth` only looks up context when env-specific
+          # context is requested. We never reference accounts, so an
+          # empty creds profile is fine.
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy
+          AWS_REGION: eu-central-1

@@ -1,0 +1,129 @@
+type User {
+  id: ID!
+  email: String!
+  name: String!
+  createdAt: String!
+}
+
+enum GroupColor {
+  indigo
+  violet
+  rose
+  amber
+  emerald
+  sky
+}
+
+enum Role {
+  admin
+  member
+}
+
+type Group {
+  id: ID!
+  name: String!
+  emoji: String!
+  color: GroupColor!
+  createdBy: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type GroupWithMeta {
+  id: ID!
+  name: String!
+  emoji: String!
+  color: GroupColor!
+  createdBy: ID!
+  createdAt: String!
+  updatedAt: String!
+  role: Role!
+  memberCount: Int!
+  listCount: Int!
+}
+
+type GroupMembership {
+  groupId: ID!
+  userId: ID!
+  role: Role!
+  joinedAt: String!
+  user: User!
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  expired
+}
+
+type Invite {
+  id: ID!
+  groupId: ID!
+  email: String!
+  invitedBy: ID!
+  status: InviteStatus!
+  createdAt: String!
+  expiresAt: String!
+}
+
+type List {
+  id: ID!
+  groupId: ID!
+  name: String!
+  emoji: String!
+  createdBy: ID!
+  createdAt: String!
+  updatedAt: String!
+  order: Int!
+}
+
+type ListItem {
+  id: ID!
+  listId: ID!
+  text: String!
+  checked: Boolean!
+  addedBy: ID!
+  createdAt: String!
+  updatedAt: String!
+  order: Int!
+}
+
+type Query {
+  me: User
+  myGroups: [GroupWithMeta!]!
+  group(id: ID!): GroupWithMeta
+  listGroupMembers(groupId: ID!): [GroupMembership!]!
+  listsInGroup(groupId: ID!): [List!]!
+  list(id: ID!): List
+  itemsInList(listId: ID!): [ListItem!]!
+  pendingInvites: [Invite!]!
+}
+
+input CreateGroupInput {
+  name: String!
+  emoji: String!
+  color: GroupColor!
+}
+
+input CreateListInput {
+  groupId: ID!
+  name: String!
+  emoji: String!
+}
+
+input AddItemInput {
+  listId: ID!
+  text: String!
+}
+
+type Mutation {
+  createGroup(input: CreateGroupInput!): Group!
+  inviteToGroup(groupId: ID!, email: String!): Invite!
+  createList(input: CreateListInput!): List!
+  deleteList(listId: ID!): Boolean!
+  addItem(input: AddItemInput!): ListItem!
+  toggleItem(listId: ID!, itemId: ID!): ListItem!
+  updateItemText(listId: ID!, itemId: ID!, text: String!): ListItem!
+  deleteItem(listId: ID!, itemId: ID!): Boolean!
+  acceptInvite(inviteId: ID!): Group!
+}

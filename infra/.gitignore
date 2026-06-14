@@ -1,0 +1,14 @@
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+# LocalStack persisted state
+.localstack
+
+# Deploy workflow outputs (resource IDs, ARNs, etc.)
+cdk-outputs.json

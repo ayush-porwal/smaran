@@ -1,19 +1,16 @@
-// React hook that returns a number incremented on any change to a
-// resource topic. Components consume it as a useEffect dependency to
-// trigger refetches after mutations. When we swap to AppSync, the
-// subscription event handler will call `setVersion((v) => v + 1)`
-// instead — the consumer code is identical.
+// Version hook. v1 with the real backend: triggers a re-render on
+// session change. Per-resource subscription events are stubbed —
+// when AppSync real-time subscriptions are wired in, this hook
+// will listen to those instead.
 import { useEffect, useState } from 'react';
 
-import { subscribe } from './mock-store';
+import { subscribeSession } from './session';
 
-export function useStoreVersion(topic: string): number {
+export function useStoreVersion(_topic: string): number {
   const [version, setVersion] = useState(0);
   useEffect(() => {
-    const unsubscribe = subscribe(topic as `group:${string}` | `list:${string}` | 'session', () => {
-      setVersion((v) => v + 1);
-    });
-    return unsubscribe;
-  }, [topic]);
+    const unsub = subscribeSession(() => setVersion((v) => v + 1));
+    return unsub;
+  }, []);
   return version;
 }
