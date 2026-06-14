@@ -122,6 +122,7 @@ export function StaggerItem({
 // from 0% to 100% and a text-color fade to `text.tertiary`.
 // `checked` is controlled; toggle by flipping the prop.
 import { type TextStyle } from 'react-native';
+import { useTheme } from 'tamagui';
 import { Text } from './Text';
 import { type TextProps } from './Text';
 
@@ -135,6 +136,17 @@ export function Checkable({
   style?: TextStyle;
 }) {
   const reduced = useReducedMotion();
+  const theme = useTheme();
+  const strikeColor = (theme.textPrimary as { val: string } | string) ?? '#000';
+  const strikeHex =
+    typeof strikeColor === 'string' ? strikeColor : strikeColor.val;
+  // Measured text content width (px) — the strike line grows from 0
+  // to this value. Stored in a shared value so the animated style can
+  // read it on the UI thread without a React re-render.
+  // `onTextLayout` reports each line's actual rendered width, NOT the
+  // container width — so it works correctly even when the parent
+  // YStack has `flex={1}` and stretches the Text to fill the row.
+  const textWidth = useSharedValue(0);
   const strikeWidth = useSharedValue(checked ? 1 : 0);
   const opacity = useSharedValue(checked ? 0.5 : 1);
 
@@ -155,24 +167,38 @@ export function Checkable({
     opacity: opacity.value,
   }));
 
+  // Width in pixels = measured text width × animated 0..1 factor.
+  // This way the line only ever spans the text width regardless of
+  // how wide the parent row is.
   const strikeAnimatedStyle = useAnimatedStyle(() => ({
-    width: `${strikeWidth.value * 100}%`,
+    width: textWidth.value * strikeWidth.value,
   }));
 
+  const onTextLayout = (e: { nativeEvent: { lines: { width: number }[] } }) => {
+    const lines = e.nativeEvent.lines;
+    if (!lines || lines.length === 0) return;
+    const widest = lines.reduce((max, l) => Math.max(max, l.width), 0);
+    if (widest > 0) textWidth.value = widest;
+  };
+
   return (
-    <Animated.View style={[{ position: 'relative' }, textAnimatedStyle]}>
-      <Text variant="body.md" style={style as TextProps['style']}>
+    <Animated.View style={textAnimatedStyle}>
+      <Text
+        variant="body.md"
+        style={style as TextProps['style']}
+        {...({ onTextLayout } as object)}
+      >
         {children}
       </Text>
       <Animated.View
+        pointerEvents="none"
         style={[
           {
             position: 'absolute',
             left: 0,
-            right: 0,
             top: '50%',
             height: 1.5,
-            backgroundColor: '$textPrimary',
+            backgroundColor: strikeHex,
           },
           strikeAnimatedStyle,
         ]}

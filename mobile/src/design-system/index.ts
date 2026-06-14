@@ -21,5 +21,6 @@ export * from './primitives/Toast';
 export * from './primitives/AvatarStack';
 export * from './primitives/Modal';
 export * from './primitives/Button';
+export * from './primitives/SwipeableRow';
 export * from './primitives/motion';
 export * from './hooks/useHideTabBar';

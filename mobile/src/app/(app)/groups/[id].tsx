@@ -4,7 +4,7 @@
 // for creating a new list.
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Plus, Users } from 'phosphor-react-native';
+import { ArrowLeft, Plus } from 'phosphor-react-native';
 import { ScrollView, YStack, View } from 'tamagui';
 
 import {
@@ -105,18 +105,7 @@ export default function GroupDetailScreen() {
               <ArrowLeft size={22} weight="regular" color="$textPrimary" />
             </View>
           </Pressable>
-          <Pressable onPress={() => setCreateOpen(true)} accessibilityLabel="New list">
-            <View
-              width={40}
-              height={40}
-              borderRadius="$full"
-              backgroundColor="$accent"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Icon icon={Plus} tone="accentText" size={20} weight="bold" />
-            </View>
-          </Pressable>
+          <View width={40} height={40} />
         </Stack.Horizontal>
 
         <YStack gap="$3">
@@ -141,12 +130,22 @@ export default function GroupDetailScreen() {
             </YStack>
           </View>
 
-          <Stack.Horizontal alignItems="center" gap="$3" marginTop="$1">
-            <Icon icon={Users} tone="textTertiary" size={16} weight="regular" />
-            <AvatarStack members={members} max={4} size={24} />
-            <Text variant="body.sm" color="$textTertiary">
-              {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
-            </Text>
+          <Stack.Horizontal alignItems="center" gap="$3" marginTop="$2">
+            <AvatarStack members={members} max={4} size={32} />
+            <YStack>
+              <Text variant="body.md" color="$textPrimary" fontWeight="500">
+                {members
+                  .slice(0, 2)
+                  .map((m) => m.name.split(' ')[0])
+                  .join(', ')}
+                {members.length > 2
+                  ? ` + ${members.length - 2} ${members.length - 2 === 1 ? 'other' : 'others'}`
+                  : ''}
+              </Text>
+              <Text variant="body.sm" color="$textTertiary">
+                {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'} in this group
+              </Text>
+            </YStack>
           </Stack.Horizontal>
         </YStack>
 
@@ -185,6 +184,39 @@ export default function GroupDetailScreen() {
           </ScrollView>
         )}
       </YStack>
+
+      {/* Floating action button — sits above the bottom safe area on
+          top of the list scroll. The empty state already has its own
+          "New list" CTA, so we hide the FAB when there's nothing to
+          add a list to. */}
+      {lists.length > 0 ? (
+        <View
+          position="absolute"
+          right="$5"
+          bottom="$5"
+          shadowColor="$shadowColor"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.18}
+          shadowRadius={10}
+        >
+          <Pressable
+            onPress={() => setCreateOpen(true)}
+            accessibilityLabel="New list"
+            hitSlop={8}
+          >
+            <View
+              width={56}
+              height={56}
+              borderRadius="$full"
+              backgroundColor="$accent"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Icon icon={Plus} tone="accentText" size={24} weight="bold" />
+            </View>
+          </Pressable>
+        </View>
+      ) : null}
 
       <CreateListModal
         open={createOpen}

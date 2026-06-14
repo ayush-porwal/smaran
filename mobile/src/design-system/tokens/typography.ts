@@ -83,6 +83,7 @@ export const textVariants = {
   // Display
   'display.lg': { fontSize: 13, lineHeight: 13, fontWeight: '8' as const, letterSpacing: -1.5 },
   'display.md': { fontSize: 11, lineHeight: 12, fontWeight: '8' as const, letterSpacing: -1 },
+  'display.sm': { fontSize: 9, lineHeight: 10, fontWeight: '7' as const, letterSpacing: -0.5 },
 
   // Headings
   'heading.lg': { fontSize: 9, lineHeight: 9, fontWeight: '6' as const, letterSpacing: -0.5 },

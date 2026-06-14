@@ -14,6 +14,7 @@ import {
   Pressable,
   Screen,
   Stack,
+  SwipeableRow,
   Text,
   TextField,
   useToast,
@@ -29,6 +30,76 @@ import {
   type ListItem as ListItemModel,
 } from '@/lib/api';
 import { useStoreVersion } from '@/lib/api/useStoreVersion';
+
+type ItemRowProps = {
+  item: ListItemModel;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+};
+
+function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
+  return (
+    <SwipeableRow
+      onRightSwipe={
+        item.checked
+          ? undefined
+          : { label: 'Done', tone: 'accent', onAction: () => onToggle(item.id) }
+      }
+      onLeftSwipe={
+        item.checked
+          ? { label: 'Undo', tone: 'muted', onAction: () => onToggle(item.id) }
+          : undefined
+      }
+    >
+      <Pressable
+        onPress={() => onToggle(item.id)}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: item.checked }}
+      >
+        <XStack
+          alignItems="center"
+          gap="$3"
+          paddingVertical="$3"
+          paddingHorizontal="$2"
+          borderRadius="$md"
+        >
+          <View
+            width={22}
+            height={22}
+            borderRadius="$sm"
+            borderColor={item.checked ? '$accent' : '$borderStrong'}
+            borderWidth={1.5}
+            backgroundColor={item.checked ? '$accent' : 'transparent'}
+            alignItems="center"
+            justifyContent="center"
+          >
+            {item.checked ? (
+              <Text fontSize={14} fontWeight="700" color="#FFFFFF">
+                ✓
+              </Text>
+            ) : null}
+          </View>
+          <YStack flex={1}>
+            <Checkable checked={item.checked}>{item.text}</Checkable>
+          </YStack>
+          <Pressable
+            onPress={(e) => {
+              // Stop the parent press from also firing the toggle.
+              e.stopPropagation?.();
+              onDelete(item.id);
+            }}
+            accessibilityLabel={`Delete ${item.text}`}
+            hitSlop={8}
+          >
+            <View padding="$2">
+              <Icon icon={Trash} tone="textTertiary" size={18} weight="regular" />
+            </View>
+          </Pressable>
+        </XStack>
+      </Pressable>
+    </SwipeableRow>
+  );
+}
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -98,7 +169,13 @@ export default function ListDetailScreen() {
     return <Screen><Text>Loading…</Text></Screen>;
   }
 
-  const completed = items.filter((i) => i.checked).length;
+  // Group items into "to do" and "done" sections. Order within each
+  // section is preserved (server returns the items in their stored
+  // order; we keep that intact so newly-added items appear at the
+  // bottom of the to-do list).
+  const todoItems = items.filter((i) => !i.checked);
+  const doneItems = items.filter((i) => i.checked);
+  const completed = doneItems.length;
   const total = items.length;
 
   return (
@@ -160,51 +237,50 @@ export default function ListDetailScreen() {
               </Text>
             </FadeIn>
           ) : (
-            items.map((item, idx) => (
-              <FadeIn key={item.id} delay={idx * 24}>
-                <XStack
-                  alignItems="center"
-                  gap="$3"
-                  paddingVertical="$3"
-                  paddingHorizontal="$2"
-                  borderRadius="$md"
-                >
-                  <Pressable
-                    onPress={() => onToggle(item.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: item.checked }}
+            <>
+              {todoItems.map((item, idx) => (
+                <FadeIn key={item.id} delay={idx * 24}>
+                  <ItemRow
+                    item={item}
+                    onToggle={onToggle}
+                    onDelete={onDelete}
+                  />
+                </FadeIn>
+              ))}
+
+              {doneItems.length > 0 ? (
+                <FadeIn>
+                  <XStack
+                    alignItems="center"
+                    gap="$3"
+                    marginTop="$5"
+                    marginBottom="$2"
+                    paddingHorizontal="$2"
                   >
-                    <View
-                      width={22}
-                      height={22}
-                      borderRadius="$sm"
-                      borderColor={item.checked ? '$accent' : '$borderStrong'}
-                      borderWidth={1.5}
-                      backgroundColor={item.checked ? '$accent' : 'transparent'}
-                      alignItems="center"
-                      justifyContent="center"
+                    <View flex={1} height={1} backgroundColor="$borderDefault" />
+                    <Text
+                      variant="label.sm"
+                      color="$textTertiary"
+                      textTransform="uppercase"
+                      letterSpacing={0.6}
                     >
-                      {item.checked ? (
-                        <Text fontSize={14} fontWeight="700" color="#FFFFFF">
-                          ✓
-                        </Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                  <YStack flex={1}>
-                    <Checkable checked={item.checked}>{item.text}</Checkable>
-                  </YStack>
-                  <Pressable
-                    onPress={() => onDelete(item.id)}
-                    accessibilityLabel={`Delete ${item.text}`}
-                  >
-                    <View padding="$2">
-                      <Icon icon={Trash} tone="textTertiary" size={18} weight="regular" />
-                    </View>
-                  </Pressable>
-                </XStack>
-              </FadeIn>
-            ))
+                      Done · {doneItems.length}
+                    </Text>
+                    <View flex={1} height={1} backgroundColor="$borderDefault" />
+                  </XStack>
+                </FadeIn>
+              ) : null}
+
+              {doneItems.map((item, idx) => (
+                <FadeIn key={item.id} delay={idx * 24}>
+                  <ItemRow
+                    item={item}
+                    onToggle={onToggle}
+                    onDelete={onDelete}
+                  />
+                </FadeIn>
+              ))}
+            </>
           )}
         </Stack.Vertical>
 

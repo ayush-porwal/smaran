@@ -8,7 +8,7 @@ export type HeadingLevel = 1 | 2 | 3 | 4;
 
 const levelToVariant: Record<HeadingLevel, NonNullable<TextProps['variant']>> = {
   1: 'display.md',
-  2: 'heading.lg',
+  2: 'display.sm',
   3: 'heading.md',
   4: 'heading.sm',
 };

@@ -4,7 +4,7 @@
 //
 // Sheet (bottom drawer) is from Tamagui's `Sheet` and is exported
 // separately. Modals are center-prompt; sheets slide from the bottom.
-import { Dialog, YStack } from 'tamagui';
+import { Dialog, YStack, View } from 'tamagui';
 import { type ReactNode } from 'react';
 
 import { Button } from './Button';
@@ -16,9 +16,14 @@ type ModalProps = {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
+  // Optional leading element (usually a 56px-tall circular icon
+  // container). Rendered above the title.
+  icon?: ReactNode;
   children?: ReactNode;
   primaryAction?: { label: string; onPress: () => void; loading?: boolean };
   secondaryAction?: { label: string; onPress: () => void };
+  // When true, the primary action renders in the danger style and
+  // the icon container uses a danger-tinted background.
   destructive?: boolean;
 };
 
@@ -27,6 +32,7 @@ export function Modal({
   onOpenChange,
   title,
   description,
+  icon,
   children,
   primaryAction,
   secondaryAction,
@@ -48,12 +54,32 @@ export function Modal({
           padding="$6"
           width="90%"
           maxWidth={420}
-          gap="$4"
+          gap="$5"
         >
-          <YStack gap="$2">
-            <Heading level={3}>{title}</Heading>
+          {icon ? (
+            <View
+              alignSelf="center"
+              width={56}
+              height={56}
+              borderRadius="$full"
+              backgroundColor={destructive ? 'rgba(220, 38, 38, 0.10)' : '$accentSubtle'}
+              alignItems="center"
+              justifyContent="center"
+            >
+              {icon}
+            </View>
+          ) : null}
+          <YStack gap="$2" alignItems="center">
+            <Heading level={2} textAlign="center">
+              {title}
+            </Heading>
             {description ? (
-              <Text variant="body.md" color="$textSecondary">
+              <Text
+                variant="body.md"
+                color="$textSecondary"
+                textAlign="center"
+                maxWidth={320}
+              >
                 {description}
               </Text>
             ) : null}
@@ -72,7 +98,12 @@ export function Modal({
                 </Button>
               ) : null}
               {secondaryAction ? (
-                <Button variant="ghost" tone="textSecondary" onPress={secondaryAction.onPress} fullWidth>
+                <Button
+                  variant="ghost"
+                  tone="textSecondary"
+                  onPress={secondaryAction.onPress}
+                  fullWidth
+                >
                   {secondaryAction.label}
                 </Button>
               ) : null}
