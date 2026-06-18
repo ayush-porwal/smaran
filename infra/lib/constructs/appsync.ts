@@ -2,10 +2,10 @@
 //
 // Architecture:
 //   - AppSync GraphQL API with Cognito user pool as default auth.
-//   - One Lambda function (Node 20, inline source) holds the
-//     resolver dispatch logic for every field. AppSync invokes
-//     the same Lambda for every Query/Mutation with
-//     `event.info.fieldName` identifying the field.
+//   - One Lambda function (Node 20, bundled with esbuild via
+//     `NodejsFunction`) holds the resolver dispatch logic for every
+//     field. AppSync invokes the same Lambda for every Query/Mutation
+//     with `event.info.fieldName` identifying the field.
 //   - The Lambda has read/write IAM on the 5 DynamoDB tables.
 //
 // Why a single Lambda + dispatcher (vs. one resolver per field):
@@ -13,8 +13,12 @@
 //     Query and Mutation type).
 //   - Authorisation logic ("is the user a member of this group?")
 //     is centralised in one file.
-//   - The Lambda stays under 256MB (small cold start) and only
-//     uses `aws-sdk` v2 which is built into the Node 20 runtime.
+//   - The Lambda stays under 256MB (small cold start).
+//
+// Bundling note: Node.js 20+ Lambda no longer includes `aws-sdk` v2,
+// so we use `NodejsFunction` (esbuild via CDK) to bundle AWS SDK v3
+// into the deploy artifact. v3's modular imports keep the bundle
+// small (~ a few hundred KB after tree-shaking).
 //
 // Cognito auth: every operation requires an id token from the user
 // pool. The Lambda reads `event.identity.sub` to identify the user.
@@ -23,10 +27,9 @@ import * as appsync from "aws-cdk-lib/aws-appsync";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 import * as path from "path";
-
-import { RESOLVER_SOURCE } from "../graphql/resolvers";
 
 export interface AppSyncConstructProps {
   envCode: string;
@@ -66,13 +69,14 @@ export class AppSyncConstruct extends Construct {
     });
 
     // --- Lambda data source ---
-    // The resolver function is a single inline string; the runtime
-    // is Node 20 (aws-sdk v2 is pre-installed). No bundling step.
-    const fn = new lambda.Function(this, "ResolverFn", {
+    // Bundled with esbuild via CDK so the AWS SDK v3 modules
+    // (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) ship
+    // inside the function zip.
+    const fn = new lambdaNodejs.NodejsFunction(this, "ResolverFn", {
       functionName: `${props.resourcePrefix}-appsync-resolver`,
       runtime: lambda.Runtime.NODEJS_20_X,
-      handler: "index.handler",
-      code: lambda.Code.fromInline(RESOLVER_SOURCE),
+      entry: path.join(__dirname, "..", "lambda", "resolver.ts"),
+      handler: "handler",
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
       environment: {
@@ -83,6 +87,11 @@ export class AppSyncConstruct extends Construct {
         ITEMS_TABLE: props.itemsTable.tableName,
       },
       description: `smaran (${props.envCode}) AppSync resolver dispatcher`,
+      bundling: {
+        minify: true,
+        sourceMap: false,
+        target: "es2020",
+      },
     });
 
     [props.groupsTable, props.membershipsTable, props.invitesTable, props.listsTable, props.itemsTable].forEach(

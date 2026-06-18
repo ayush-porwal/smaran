@@ -17,10 +17,17 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
-import { useReducedMotion } from 'react-native-reanimated';
+ useReducedMotion } from 'react-native-reanimated';
 
 import { springs, timings, easings } from '../tokens/motion';
+
+// Checkable: animated check-off wrapper. Drives a strike-through width
+// from 0% to 100% and a text-color fade to `text.tertiary`.
+// `checked` is controlled; toggle by flipping the prop.
+import { type TextStyle } from 'react-native';
+import { useTheme } from 'tamagui';
+import { Text } from './Text';
+import { type TextProps } from './Text';
 
 const SPRING_OPTS = springs.snappy;
 
@@ -81,14 +88,21 @@ export function PressableScale({
     <Animated.View
       onTouchStart={() => {
         if (reduced) return;
+        // `SharedValue.value` is mutated here on purpose — Reanimated
+        // tracks the assignment and schedules the value change on the
+        // UI thread. The react-hooks/immutability rule is overly
+        // strict for this library's contract.
+        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(pressedScale, SPRING_OPTS);
       }}
       onTouchEnd={() => {
         if (reduced) return;
+        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(1, SPRING_OPTS);
       }}
       onTouchCancel={() => {
         if (reduced) return;
+        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(1, SPRING_OPTS);
       }}
       style={[style, animatedStyle]}
@@ -117,14 +131,6 @@ export function StaggerItem({
     </FadeIn>
   );
 }
-
-// Checkable: animated check-off wrapper. Drives a strike-through width
-// from 0% to 100% and a text-color fade to `text.tertiary`.
-// `checked` is controlled; toggle by flipping the prop.
-import { type TextStyle } from 'react-native';
-import { useTheme } from 'tamagui';
-import { Text } from './Text';
-import { type TextProps } from './Text';
 
 export function Checkable({
   checked,

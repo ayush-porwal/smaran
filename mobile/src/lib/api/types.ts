@@ -1,7 +1,6 @@
-// Domain types. These mirror the eventual AppSync / GraphQL schema in
-// docs/design-spec.md section 15.2. When we swap from `lib/api/mock.ts`
-// to `lib/api/graphql.ts`, the imports here stay unchanged — only the
-// implementation behind the API surface moves.
+// Domain types. These mirror the AppSync / GraphQL schema in
+// `infra/lib/graphql/schema.graphql`. The data layer lives in
+// `lib/api/graphql.ts`; this file is the shared type surface.
 
 export type ID = string;
 export type ISODateString = string;

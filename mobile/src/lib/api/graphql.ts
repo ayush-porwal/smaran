@@ -1,11 +1,6 @@
-// AppSync GraphQL data layer. Same exported surface as `mock.ts`:
-// the public functions live in `client.ts` which re-exports one
-// of the two implementations. Today, `client.ts` exports this
-// file; tomorrow, when the data layer changes, swap the import.
-//
-// Auth: every request attaches the Cognito id token as a bearer
-// token in the Authorization header. AppSync validates against
-// the user pool configured in Phase 3 / 5.
+// AppSync GraphQL data layer. Every request attaches the Cognito id
+// token as a bearer token in the Authorization header; AppSync
+// validates against the user pool configured in Phase 3 / 5.
 
 import { ApiError, type AuthSession, type SignInInput, type SignUpInput } from './types';
 import type {

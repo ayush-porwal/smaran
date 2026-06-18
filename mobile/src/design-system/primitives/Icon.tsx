@@ -56,9 +56,13 @@ const ON_COLOR_TONES: Record<string, string> = {
 // `useTheme()` returns a map from token name to a `{ val, isVar, ... }`
 // object. For hex strings the `.val` is what we want to hand to SVG.
 function useIconColor(tone: IconTone, override?: string): string {
+  // Rules of Hooks: hooks must be called in the same order every
+  // render. Call `useTheme()` unconditionally up front, even when
+  // we'll return early — the order matters, not whether we use the
+  // result.
+  const t = useTheme();
   if (override) return override;
   if (ON_COLOR_TONES[tone]) return ON_COLOR_TONES[tone];
-  const t = useTheme();
   // `t[tone]` is a token entry; `.val` is the resolved hex string.
   const entry = t[tone] as { val?: string } | string | undefined;
   if (typeof entry === 'string') return entry;

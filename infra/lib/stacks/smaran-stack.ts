@@ -22,7 +22,7 @@ import { AppSyncConstruct } from "../constructs/appsync";
 import { CognitoConstruct } from "../constructs/cognito";
 import { DnsConstruct } from "../constructs/dns";
 import { DynamoDbConstruct } from "../constructs/dynamodb";
-import { EnvCodes, GOOGLE_OAUTH_SECRET_NAME } from "../constants";
+import { EnvCodes, GOOGLE_OAUTH_SECRET_NAME, Regions } from "../constants";
 
 export interface SmaranStackProps extends cdk.StackProps {
   envCode: EnvCodes;
@@ -115,8 +115,9 @@ export class SmaranStack extends cdk.Stack {
       exportName: `${props.resourcePrefix}-user-pool-client-id`,
     });
     new cdk.CfnOutput(this, "HostedUiDomain", {
-      value: this.cognito.userPoolDomain.domainName,
-      description: "Cognito hosted UI domain prefix (no protocol, no region)",
+      value: `${this.cognito.userPoolDomain.domainName}.auth.${Regions.PRIMARY}.amazoncognito.com`,
+      description:
+        "Cognito hosted UI FQDN (no protocol). Mobile constructs `https://${HostedUiDomain}/oauth2/...` URLs from this.",
       exportName: `${props.resourcePrefix}-hosted-ui-domain`,
     });
     new cdk.CfnOutput(this, "HostedUiUrl", {

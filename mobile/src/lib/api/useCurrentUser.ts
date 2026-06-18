@@ -12,7 +12,9 @@ export function useCurrentUser(): { user: User | null; loading: boolean } {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    // `loading` is already `true` from `useState(true)`; no need to
+    // re-set it here. (And setting it synchronously in the effect
+    // would trip react-hooks/set-state-in-effect.)
     getCurrentUser()
       .then((u) => {
         if (cancelled) return;

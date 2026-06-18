@@ -19,19 +19,17 @@ import { makeRedirectUri } from 'expo-auth-session';
 import { ApiError, type AuthSession, type User } from './api/types';
 import { config } from './config';
 import { notifySessionChanged } from './api/session';
+import { bytesToBase64url, base64urlToString } from './base64url';
+
+// Refresh tokens proactively this many ms before expiry so an
+// in-flight AppSync call doesn't hit a 401 mid-request.
+const REFRESH_BUFFER_MS = 60_000;
 
 const STORAGE_KEY = 'smaran.auth.tokens.v1';
 const BROWSER_REDIRECT = makeRedirectUri({ scheme: 'smaran', path: 'callback' });
 const LOGOUT_REDIRECT = makeRedirectUri({ scheme: 'smaran', path: 'signout' });
 
 // --- PKCE helpers ---
-function base64url(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let s = '';
-  for (let i = 0; i < bytes.byteLength; i++) s += String.fromCharCode(bytes[i]);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 function stringToBytes(s: string): Uint8Array {
   const out = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
@@ -41,13 +39,17 @@ function stringToBytes(s: string): Uint8Array {
 async function generatePkce(): Promise<{ verifier: string; challenge: string }> {
   // 32 random bytes -> 43 char base64url. We use that as the
   // verifier (no need to hash the random bytes — the verifier IS
-  // the secret).
-  const random = crypto.getRandomValues(new Uint8Array(32));
-  const verifier = base64url(random.buffer);
-  const challenge = base64url(
-    await Crypto.digest(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      stringToBytes(verifier) as unknown as BufferSource,
+  // the secret). `expo-crypto` is the React-Native-safe random
+  // source; the browser `crypto.getRandomValues` global doesn't
+  // exist on iOS/Android.
+  const random = await Crypto.getRandomBytesAsync(32);
+  const verifier = bytesToBase64url(random);
+  const challenge = bytesToBase64url(
+    new Uint8Array(
+      await Crypto.digest(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        stringToBytes(verifier) as unknown as BufferSource,
+      ),
     ),
   );
   return { verifier, challenge };
@@ -95,7 +97,7 @@ export async function signIn(): Promise<AuthSession> {
     throw new ApiError('network', 'App is not configured for this environment');
   }
   const { verifier, challenge } = await generatePkce();
-  const state = base64url(crypto.getRandomValues(new Uint8Array(16)).buffer);
+  const state = bytesToBase64url(await Crypto.getRandomBytesAsync(16));
 
   const authorizeUrl = new URL(
     `https://${config.hostedUiDomain}/oauth2/authorize`,
@@ -202,7 +204,7 @@ export async function signOut(): Promise<void> {
 export async function getCurrentUser(): Promise<User | null> {
   const tokens = await loadTokens();
   if (!tokens) return null;
-  if (Date.now() >= tokens.expiresAt) {
+  if (Date.now() >= tokens.expiresAt - REFRESH_BUFFER_MS) {
     if (!tokens.refreshToken) {
       await clearTokens();
       return null;
@@ -228,7 +230,7 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function getIdToken(): Promise<string | null> {
   const tokens = await loadTokens();
   if (!tokens) return null;
-  if (Date.now() < tokens.expiresAt) return tokens.idToken;
+  if (Date.now() < tokens.expiresAt - REFRESH_BUFFER_MS) return tokens.idToken;
   if (!tokens.refreshToken) {
     await clearTokens();
     return null;
@@ -291,8 +293,7 @@ function tokensToSession(t: StoredTokens): AuthSession {
 type Claims = { sub: string; email?: string; name?: string; exp: number };
 function decodeJwt(token: string): Claims {
   const payload = token.split('.')[1];
-  const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-  return JSON.parse(json) as Claims;
+  return JSON.parse(base64urlToString(payload)) as Claims;
 }
 
 export const REDIRECT_URI = BROWSER_REDIRECT;

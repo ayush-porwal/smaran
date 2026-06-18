@@ -8,7 +8,7 @@
 //     the left edge. Use for "mark done" on unchecked items.
 //   - `onLeftSwipe`: content drags leftward, action slides in from
 //     the right edge. Use for "undo" on checked items, or "delete".
-import { type ReactNode } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { View, XStack } from 'tamagui';
 import { Check, ArrowCounterClockwise } from 'phosphor-react-native';
@@ -101,7 +101,7 @@ export function SwipeableRow({
   onRightSwipe,
   onLeftSwipe,
 }: SwipeableRowProps) {
-  const ref = { current: null as Swipeable | null };
+  const ref = useRef<Swipeable | null>(null);
   // `Swipeable` is counter-intuitive:
   //   - `renderLeftActions` = action revealed by a RIGHT swipe
   //     (content drags rightward, revealing what's on the left).
