@@ -1,0 +1,261 @@
+name: deploy
+
+# Manual deployment of staging + prod, gated on:
+#   1. CI passes (the `build` job re-runs the same checks as
+#      ci.yaml: typecheck, jest, cdk synth, mobile tsc, mobile
+#      lint). If CI fails, nothing deploys.
+#   2. Staging deploys successfully (prod's `deploy_prod` job
+#      `needs: deploy_staging` — if staging blows up, prod
+#      never runs).
+#   3. GitHub Environment protection rules on `staging` and
+#      `prod` (configure in Settings → Environments) for human
+#      approval, branch restrictions, and wait timers.
+#
+# The previous setup auto-deployed on every push to main
+# (deploy-staging.yaml + deploy-prod.yaml each had a `push:
+# main` trigger) and had no gate between staging and prod. The
+# pattern below — borrowed from efdigital/b2s-feedback-campaigns —
+# makes staging the prerequisite for prod.
+#
+# Sandbox (per-PR preview) lives in deploy-sandbox.yaml and is
+# intentionally separate: it runs on every PR via `workflow_run`
+# from ci, not manually.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # --- CI gate: re-runs the same checks as ci.yaml on the
+  # same SHA the human is about to deploy. If the user pushed
+  # new commits after CI went green, this catches it. ---
+  build:
+    name: build, test, synth
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm (infra)
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Cache npm (mobile)
+        uses: actions/cache@v5
+        with:
+          path: mobile/node_modules
+          key: npm-mobile-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
+          restore-keys: npm-mobile-${{ runner.os }}-
+
+      - name: Install (infra)
+        working-directory: infra
+        run: npm ci
+
+      - name: Typecheck (infra)
+        working-directory: infra
+        run: npx tsc --noEmit
+
+      - name: Test (infra)
+        working-directory: infra
+        run: npx jest --ci
+
+      - name: Synth (infra)
+        working-directory: infra
+        run: npx cdk synth --quiet
+
+      - name: Install (mobile)
+        working-directory: mobile
+        run: npm ci
+
+      - name: Typecheck (mobile)
+        working-directory: mobile
+        run: npx tsc --noEmit
+
+      - name: Lint (mobile)
+        working-directory: mobile
+        run: npm run lint
+
+  # --- Staging: diff then deploy ---
+  diff_staging:
+    name: cdk diff staging
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume OIDC role
+        uses: ./.github/actions/assume-deployer
+        with:
+          session_suffix: 'staging-diff'
+
+      - name: cdk diff
+        run: npx cdk diff smaran-staging-eu-central-1
+
+  deploy_staging:
+    name: cdk deploy staging
+    needs: diff_staging
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume OIDC role
+        uses: ./.github/actions/assume-deployer
+        with:
+          session_suffix: 'staging-deploy'
+
+      - name: cdk deploy
+        run: npx cdk deploy smaran-staging-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
+
+      - name: Expose staging outputs
+        if: success()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "## Staging outputs" >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write mobile config (staging)
+        if: success()
+        uses: ./.github/actions/write-mobile-config
+        with:
+          stack_name: smaran-staging-eu-central-1
+          env_code: staging
+          output_filename: staging.json
+
+  # --- Prod: diff then deploy. Prod ONLY runs if staging
+  # deploy succeeded. The `needs: deploy_staging` is the gate. ---
+  diff_prod:
+    name: cdk diff prod
+    needs: deploy_staging
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume OIDC role
+        uses: ./.github/actions/assume-deployer
+        with:
+          session_suffix: 'prod-diff'
+
+      - name: cdk diff
+        run: npx cdk diff smaran-production-eu-central-1
+
+  deploy_prod:
+    name: cdk deploy prod
+    needs: diff_prod
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume OIDC role
+        uses: ./.github/actions/assume-deployer
+        with:
+          session_suffix: 'prod-deploy'
+
+      - name: cdk deploy
+        run: npx cdk deploy smaran-production-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
+
+      - name: Expose prod outputs
+        if: success()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "## Prod outputs" >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write mobile config (prod)
+        if: success()
+        uses: ./.github/actions/write-mobile-config
+        with:
+          stack_name: smaran-production-eu-central-1
+          env_code: prod
+          output_filename: prod.json

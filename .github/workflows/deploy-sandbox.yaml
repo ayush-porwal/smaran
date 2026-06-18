@@ -1,30 +1,77 @@
 name: deploy-sandbox
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
-# Per-PR concurrency: only one deploy runs per PR at a time, and a
-# fresh push cancels the previous in-flight one.
+# One in-flight deploy per PR at a time. A fresh commit cancels
+# the previous one (the ci re-run will re-fire this workflow).
+# For workflow_dispatch we group by run_id so concurrent manual
+# runs each get their own slot.
 concurrency:
-  group: deploy-sandbox-pr-${{ github.event.pull_request.number }}
+  group: deploy-sandbox-${{ github.event.workflow_run.pull_requests[0].number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: deploy ${{ github.event.pull_request.number || 'manual' }}
+  # Tiny resolver job: reads `workflow_run.pull_requests[0].number`
+  # (PR number) and decides whether to deploy. Push-to-main ci runs
+  # land here with an empty array — we skip cleanly.
+  resolve:
+    name: resolve
     runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      stack_prefix: ${{ steps.resolve.outputs.stack_prefix }}
+      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
+    steps:
+      - name: Resolve deploy params
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          {
+            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+              echo "pr_number=manual"
+              echo "stack_prefix="
+              echo "should_deploy=true"
+            else
+              CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+              NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")
+              if [ "$CONCLUSION" != "success" ]; then
+                echo "should_deploy=false  # ci concluded $CONCLUSION"
+              elif [ -z "$NUMBER" ]; then
+                echo "should_deploy=false  # not a PR run (push-to-main, handled by deploy-staging)"
+              else
+                echo "pr_number=$NUMBER"
+                echo "stack_prefix=pr${NUMBER}-"
+                echo "should_deploy=true"
+              fi
+            fi
+          } >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: deploy ${{ needs.resolve.outputs.pr_number || 'manual' }}
+    needs: resolve
+    if: needs.resolve.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: sandbox
     defaults:
       run:
         working-directory: infra
-    environment: sandbox
     permissions:
       contents: read
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        # `github.sha` is the commit the ci run tested:
+        #   - workflow_run -> workflow_run.head_sha (PR head)
+        #   - workflow_dispatch -> user-selected SHA (default: ref head)
+        with:
+          ref: ${{ github.sha }}
 
       - name: Setup Node 24
         uses: actions/setup-node@v6
@@ -46,26 +93,17 @@ jobs:
         with:
           session_suffix: 'sandbox-deploy'
 
-      - name: Resolve PR number
-        id: pr
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "number=manual" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: cdk deploy
         env:
-          # `infra/bin/smaran.ts` reads CDK_STACK_PREFIX and, if set,
+          # `infra/bin/smaran.ts` reads CDK_STACK_PREFIX; when set it
           # prefixes the sandbox stack name (`pr1-smaran-sandbox`)
-          # so concurrent PR sandboxes don't collide. Without this,
-          # CDK synthesises `smaran-sandbox` while the workflow
-          # tries to deploy `pr1-smaran-sandbox` → "No stacks match".
-          CDK_STACK_PREFIX: pr${{ steps.pr.outputs.number }}
+          # so concurrent PR sandboxes don't collide. Empty for
+          # manual dispatches -> deploys to shared `smaran-sandbox`.
+          CDK_STACK_PREFIX: ${{ needs.resolve.outputs.stack_prefix }}
         run: |
+          PREFIX="${{ needs.resolve.outputs.stack_prefix }}"
           npx cdk deploy \
-            pr${{ steps.pr.outputs.number }}-smaran-sandbox-eu-central-1 \
+            ${PREFIX}smaran-sandbox-eu-central-1 \
             --require-approval never \
             --outputs-file cdk-outputs.json
 
@@ -81,6 +119,6 @@ jobs:
         if: success()
         uses: ./.github/actions/write-mobile-config
         with:
-          stack_name: pr${{ steps.pr.outputs.number }}-smaran-sandbox-eu-central-1
-          env_code: pr
-          output_filename: pr-${{ steps.pr.outputs.number }}.json
+          stack_name: ${{ needs.resolve.outputs.stack_prefix }}smaran-sandbox-eu-central-1
+          env_code: ${{ needs.resolve.outputs.pr_number == 'manual' && 'sandbox' || 'pr' }}
+          output_filename: ${{ needs.resolve.outputs.pr_number == 'manual' && 'sandbox.json' || format('pr-{0}.json', needs.resolve.outputs.pr_number) }}
