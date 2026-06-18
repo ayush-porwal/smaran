@@ -56,10 +56,16 @@ jobs:
           fi
 
       - name: cdk deploy
+        env:
+          # `infra/bin/smaran.ts` reads CDK_STACK_PREFIX and, if set,
+          # prefixes the sandbox stack name (`pr1-smaran-sandbox`)
+          # so concurrent PR sandboxes don't collide. Without this,
+          # CDK synthesises `smaran-sandbox` while the workflow
+          # tries to deploy `pr1-smaran-sandbox` → "No stacks match".
+          CDK_STACK_PREFIX: pr${{ steps.pr.outputs.number }}
         run: |
-          PREFIX="pr${{ steps.pr.outputs.number }}"
           npx cdk deploy \
-            ${PREFIX}-smaran-sandbox-eu-central-1 \
+            pr${{ steps.pr.outputs.number }}-smaran-sandbox-eu-central-1 \
             --require-approval never \
             --outputs-file cdk-outputs.json
 
