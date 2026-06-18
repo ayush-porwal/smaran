@@ -103,9 +103,18 @@ export class CognitoConstruct extends Construct {
     // The client ID + secret come from Secrets Manager via dynamic
     // references — CloudFormation resolves them at deploy time so
     // the plaintext never enters the template.
+    //
+    // `UserPoolIdentityProviderGoogleProps.clientId` is typed as
+    // `string` (the CFN schema only accepts a literal string for
+    // ProviderDetails.ClientID), but the underlying token is a
+    // `SecretValue` and the `@aws-cdk/core:checkSecretUsage` flag
+    // would block `SecretValue.resolve()` from producing the dynamic
+    // reference. `.unsafeUnwrap()` strips the SecretValue wrapper
+    // while preserving the underlying token — the template still
+    // contains `{{resolve:secretsmanager:...}}`, never plaintext.
     const google = new cognito.UserPoolIdentityProviderGoogle(this, "Google", {
       userPool: this.userPool,
-      clientId: googleOAuthSecret.secretValueFromJson("clientId").toString(),
+      clientId: googleOAuthSecret.secretValueFromJson("clientId").unsafeUnwrap(),
       clientSecretValue: googleOAuthSecret.secretValueFromJson("clientSecret"),
       scopes: ["openid", "email", "profile"],
       attributeMapping: {
