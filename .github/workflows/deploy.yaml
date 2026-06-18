@@ -1,26 +1,10 @@
 name: deploy
 
-# Manual deployment of staging + prod, gated on:
-#   1. CI passes (the `build` job re-runs the same checks as
-#      ci.yaml: typecheck, jest, cdk synth, mobile tsc, mobile
-#      lint). If CI fails, nothing deploys.
-#   2. Staging deploys successfully (prod's `deploy_prod` job
-#      `needs: deploy_staging` — if staging blows up, prod
-#      never runs).
-#   3. GitHub Environment protection rules on `staging` and
-#      `prod` (configure in Settings → Environments) for human
-#      approval, branch restrictions, and wait timers.
-#
-# The previous setup auto-deployed on every push to main
-# (deploy-staging.yaml + deploy-prod.yaml each had a `push:
-# main` trigger) and had no gate between staging and prod. The
-# pattern below — borrowed from efdigital/b2s-feedback-campaigns —
-# makes staging the prerequisite for prod.
-#
-# Sandbox (per-PR preview) lives in deploy-sandbox.yaml and is
-# intentionally separate: it runs on every PR via `workflow_run`
-# from ci, not manually.
 on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -29,10 +13,15 @@ permissions:
 
 jobs:
   # --- CI gate: re-runs the same checks as ci.yaml on the
-  # same SHA the human is about to deploy. If the user pushed
-  # new commits after CI went green, this catches it. ---
+  # same SHA the human is about to deploy. workflow_run already
+  # guarantees ci just succeeded, but re-running catches the
+  # case where someone pushed between the ci run and the
+  # deploy approval. ---
   build:
     name: build, test, synth
+    # workflow_run fires for PR and push-to-main; only run on
+    # push-to-main ci completions. workflow_dispatch always runs.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && !github.event.workflow_run.pull_requests[0])
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -85,12 +74,12 @@ jobs:
         working-directory: mobile
         run: npm run lint
 
-  # --- Staging: diff then deploy ---
+  # --- Staging: diff (no approval) then deploy (approval gate) ---
   diff_staging:
     name: cdk diff staging
     needs: build
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && !github.event.workflow_run.pull_requests[0])
     runs-on: ubuntu-latest
-    environment: staging
     defaults:
       run:
         working-directory: infra
@@ -124,7 +113,10 @@ jobs:
   deploy_staging:
     name: cdk deploy staging
     needs: diff_staging
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && !github.event.workflow_run.pull_requests[0])
     runs-on: ubuntu-latest
+    # Human-approval gate. Configure in:
+    #   Settings → Environments → staging → Required reviewers
     environment: staging
     defaults:
       run:
@@ -172,13 +164,13 @@ jobs:
           env_code: staging
           output_filename: staging.json
 
-  # --- Prod: diff then deploy. Prod ONLY runs if staging
-  # deploy succeeded. The `needs: deploy_staging` is the gate. ---
+  # --- Prod: diff (no approval) then deploy (approval gate).
+  # Prod only runs if staging deploy succeeded. ---
   diff_prod:
     name: cdk diff prod
     needs: deploy_staging
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && !github.event.workflow_run.pull_requests[0])
     runs-on: ubuntu-latest
-    environment: production
     defaults:
       run:
         working-directory: infra
@@ -212,7 +204,10 @@ jobs:
   deploy_prod:
     name: cdk deploy prod
     needs: diff_prod
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && !github.event.workflow_run.pull_requests[0])
     runs-on: ubuntu-latest
+    # Human-approval gate. Configure required reviewers in:
+    #   Settings → Environments → production → Required reviewers
     environment: production
     defaults:
       run:
