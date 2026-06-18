@@ -1,6 +1,4 @@
-// Root index. The mock layer auto-signs in a user, so we just hand
-// off to the (app) tab navigator. When real Cognito lands, this is
-// where the auth gate lives: check the session, redirect to (auth) if
+// Root index. Auth gate: check the session, redirect to (auth) if
 // missing, otherwise to (app).
 import { Redirect } from 'expo-router';
 

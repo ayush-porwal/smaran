@@ -1,6 +1,6 @@
 # smaran infra
 
-AWS CDK infrastructure for [smaran](https://github.com/ayushporwal/smaran) (group list-sharing app).
+AWS CDK infrastructure for [smaran](https://github.com/ayush-porwal/smaran) (group list-sharing app).
 
 ## Layout
 
@@ -28,7 +28,7 @@ infra/
 | `staging`  | `139316820779`  | `eu-central-1` | `DESTROY` | push to `main`                  |
 | `prod`     | `916657620124`  | `eu-central-1` | `RETAIN`  | `workflow_dispatch` only (manual gate) |
 
-`Infra` account (`126606499529`) hosts the GitHub Actions OIDC role that all deploy jobs assume into.
+`Infra` account (`126606499529`) hosts the **only** GitHub OIDC trust. Workflows assume `126606499529:ap-github-actions-cdk` once (hop 1, OIDC); `cdk deploy` then chain-assumes `cdk-hnb659fds-deploy-role-*` in each target account (hop 2, done by CDK itself). See [`docs/HANDOFF-v2.md` §4](../docs/HANDOFF-v2.md#4-migration-steps) for the full setup.
 
 ## Local dev
 
@@ -47,25 +47,25 @@ Hand-rolled GitHub Actions under `.github/workflows/`:
 | ----------------------- | --------------------------------------- | -------- |
 | `ci.yaml`               | PR open / push to PR                    | n/a (no AWS) |
 | `deploy-sandbox.yaml`   | PR opened/synchronised/reopened         | sandbox  |
-| `destroy-sandbox.yaml`  | PR closed (merged OR closed)            | sandbox  |
+| `destroy-sandbox.yaml`  | PR closed (not merged)                  | sandbox  |
 | `deploy-staging.yaml`   | push to `main`                          | staging  |
 | `deploy-prod.yaml`      | `workflow_dispatch` only (manual gate)  | prod     |
 
-### One-time OIDC setup (per AWS account)
+Two reusable composite actions under `.github/actions/`:
 
-Each of the four accounts needs an OIDC identity provider + role so GitHub Actions can assume into it. To set up the **sandbox** account (repeat for staging, prod, infra):
+| Action                    | What it does                                            |
+| ------------------------- | ------------------------------------------------------- |
+| `assume-deployer`          | One-hop OIDC assume into `ap-github-actions-cdk`.       |
+| `write-mobile-config`     | Reads `cdk-outputs.json` and writes `mobile/config/*`. |
 
-1. In the AWS console → IAM → Identity providers → Add provider
-   - Provider type: OpenID Connect
-   - Provider URL: `https://token.actions.githubusercontent.com`
-   - Audience: `sts.amazonaws.com`
-2. IAM → Roles → Create role → Web identity → pick the OIDC provider
-   - Condition: `token.actions.githubusercontent.com:sub` = `repo:ayushporwal/smaran:ref:refs/heads/*` (or `pull_request` for sandbox; tighten per env)
-   - Permissions: start with `AdministratorAccess`; tighten in a follow-up PR
-   - Role name: `github-actions-smaran-deploy`
-3. Copy the role ARN into the matching workflow's `AWS_ROLE_TO_ASSUME` env var.
+### One-time OIDC + bootstrap setup
 
-The workflows assume this role is already in place; the CDK code never creates it (IAM roles that assume other roles are a bootstrapping problem, and we want the trust boundary to live in AWS, not in CDK).
+Full step-by-step in [`docs/HANDOFF-v2.md` §4](../docs/HANDOFF-v2.md#4-migration-steps). Short version:
+
+1. **Infra account** (`126606499529`): create the GitHub OIDC provider + one role (`ap-github-actions-cdk`) whose inline policy allows `sts:AssumeRole` on `role/cdk-*` in each target account.
+2. **Each target account** (`219602461448`, `139316820779`, `916657620124`): run `cdk bootstrap aws://<account>/eu-central-1 --trust 126606499529 --trust-for-lookup 126606499529 --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess`. This creates the `cdk-hnb659fds-{deploy,file-publishing,image-publishing,lookup,cfn-exec}-role-*` roles with the org's standard separation-of-duties split.
+
+The CDK code does not create IAM roles — the trust boundary lives in AWS, set up by `cdk bootstrap`.
 
 ## Phases
 
@@ -73,17 +73,13 @@ The workflows assume this role is already in place; the CDK code never creates i
 | ----- | ---------- | ------------------------------------------ |
 | 1     | done       | Bootstrap, empty stack, LocalStack         |
 | 2     | done       | CI + sandbox/staging/prod deploy workflows |
-| 3     | **current** | Cognito user pool + Google OAuth         |
-| 4     | pending    | DynamoDB tables                            |
-| 5     | pending    | AppSync + Lambda resolvers                 |
-| 6     | pending    | Mobile auth wiring                         |
-| 7     | pending    | Mobile data wiring                         |
-| 8     | pending    | Cleanup — remove mock data, dead code      |
+| 3     | done       | Cognito user pool + Google OAuth           |
+| 4     | done       | DynamoDB tables                            |
+| 5     | done       | AppSync + Lambda resolvers                 |
+| 6     | done       | Mobile auth wiring                         |
+| 7     | done       | Mobile data wiring                         |
+| 8     | done       | Cleanup — remove mock data, dead code      |
 
 ## Secrets + OAuth
 
-Phase 3 needs a Google OAuth 2.0 client (one-time setup in
-[Google Cloud Console](https://console.cloud.google.com/)).
-Details in [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md).
-The client ID + secret reach CDK via either `-c googleClientId=...`
-or `CDK_CONTEXT_GOOGLE_CLIENT_ID` env var.
+Cognito Google sign-in needs an OAuth 2.0 client per env. Full setup in [`infra/docs/google-oauth-setup.md`](docs/google-oauth-setup.md). The client ID + secret are stored in AWS Secrets Manager (`smaran/google-oauth`, one secret per env account) and CDK reads them at deploy time via a CloudFormation dynamic reference — they never enter the template, so they're not in `cdk diff` output.

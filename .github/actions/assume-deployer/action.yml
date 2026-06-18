@@ -1,0 +1,18 @@
+name: Assume OIDC role
+description: >
+  Assumes the OIDC-trusted infra-account role (ap-github-actions-cdk).
+  CDK then chain-assumes the target account's bootstrap roles on its
+  own, based on each stack's env.account (see HANDOFF-v2 §4c).
+inputs:
+  session_suffix:
+    description: 'Short identifier for the role-session-name (e.g. sandbox-deploy, prod-diff)'
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Assume the OIDC role in the infra account
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+        aws-region: eu-central-1
+        role-session-name: smaran-${{ inputs.session_suffix }}-${{ github.sha }}

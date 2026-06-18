@@ -29,8 +29,5 @@ new SmaranStack(app, stackId, {
   env: { account: Accounts.LOCAL, region: Regions.PRIMARY },
   envCode: EnvCodes.LOCAL,
   resourcePrefix: STACK_NAME_PREFIX_BY_ENV[EnvCodes.LOCAL],
-  // LocalStack gets placeholder Google creds baked into the stack.
-  googleClientId: "local-placeholder-client-id",
-  googleClientSecret: "local-placeholder-client-secret",
   description: "smaran (local) — LocalStack-only iteration target",
 });

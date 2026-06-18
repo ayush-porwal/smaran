@@ -20,38 +20,48 @@ jobs:
   build:
     name: build, test, synth
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infra
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24"
 
-      - name: Cache npm
-        uses: actions/cache@v4
+      - name: Cache npm (infra)
+        uses: actions/cache@v5
         with:
           path: infra/node_modules
           key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
           restore-keys: npm-infra-${{ runner.os }}-
 
-      - name: Install
+      - name: Cache npm (mobile)
+        uses: actions/cache@v5
+        with:
+          path: mobile/node_modules
+          key: npm-mobile-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
+          restore-keys: npm-mobile-${{ runner.os }}-
+
+      # --- infra checks (the cheap end-to-end AWS sanity tests) ---
+
+      - name: Install (infra)
+        working-directory: infra
         run: npm ci
 
-      - name: Typecheck
+      - name: Typecheck (infra)
+        working-directory: infra
         run: npx tsc --noEmit
 
-      - name: Test
+      - name: Test (infra)
+        working-directory: infra
         run: npx jest --ci
 
       # `cdk synth` is the cheapest end-to-end check we can do without
       # AWS credentials. On PRs this catches missing imports, broken
       # cross-stack references, and CDK type errors.
       - name: cdk synth
+        working-directory: infra
         run: npx cdk synth --quiet
         env:
           # `cdk synth` only looks up context when env-specific
@@ -60,3 +70,17 @@ jobs:
           AWS_ACCESS_KEY_ID: dummy
           AWS_SECRET_ACCESS_KEY: dummy
           AWS_REGION: eu-central-1
+
+      # --- mobile checks (PR-level safety net for the Expo app) ---
+
+      - name: Install (mobile)
+        working-directory: mobile
+        run: npm ci
+
+      - name: Typecheck (mobile)
+        working-directory: mobile
+        run: npx tsc --noEmit
+
+      - name: Lint (mobile)
+        working-directory: mobile
+        run: npm run lint

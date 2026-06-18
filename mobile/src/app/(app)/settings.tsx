@@ -1,5 +1,4 @@
-// Settings tab. Theme picker, account info, sign out. The "Sign in
-// with Google" button (when Cognito lands) will live here too.
+// Settings tab. Theme picker, account info, sign out.
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { YStack, XStack, View } from 'tamagui';

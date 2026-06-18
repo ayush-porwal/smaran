@@ -15,8 +15,6 @@ describe("SmaranStack", () => {
       env: { account: "111111111111", region: Regions.PRIMARY },
       envCode: EnvCodes.SANDBOX,
       resourcePrefix: STACK_NAME_PREFIX_BY_ENV[EnvCodes.SANDBOX],
-      googleClientId: "test-client-id",
-      googleClientSecret: "test-client-secret",
     });
     const template = Template.fromStack(stack);
 

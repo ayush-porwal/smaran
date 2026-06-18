@@ -1,0 +1,12 @@
+{
+  "build": {
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "SMARAN_ENV": "prod"
+      }
+    }
+  }
+}

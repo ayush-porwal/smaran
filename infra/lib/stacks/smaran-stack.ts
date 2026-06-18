@@ -15,31 +15,19 @@
 // CloudFormation resource names look like `{prefix}-{construct-id}`
 // (e.g. `pr1234-smaran-sandbox-cognito`).
 import * as cdk from "aws-cdk-lib/core";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 
 import { AppSyncConstruct } from "../constructs/appsync";
 import { CognitoConstruct } from "../constructs/cognito";
 import { DnsConstruct } from "../constructs/dns";
 import { DynamoDbConstruct } from "../constructs/dynamodb";
-import { EnvCodes } from "../constants";
+import { EnvCodes, GOOGLE_OAUTH_SECRET_NAME } from "../constants";
 
 export interface SmaranStackProps extends cdk.StackProps {
   envCode: EnvCodes;
   /** Stack-name prefix, e.g. `pr1234-smaran-sandbox`. */
   resourcePrefix: string;
-  /**
-   * Google OAuth 2.0 client ID. Read from CDK context
-   * (`-c googleClientId=...`) or the `CDK_CONTEXT_GOOGLE_CLIENT_ID`
-   * env var. Required for non-LOCAL envs.
-   */
-  googleClientId: string;
-  /**
-   * Google OAuth 2.0 client secret. Read from CDK context
-   * (`-c googleClientSecret=...`) or the
-   * `CDK_CONTEXT_GOOGLE_CLIENT_SECRET` env var. Required for
-   * non-LOCAL envs.
-   */
-  googleClientSecret: string;
 }
 
 export class SmaranStack extends cdk.Stack {
@@ -58,19 +46,32 @@ export class SmaranStack extends cdk.Stack {
     cdk.Tags.of(this).add("resource-prefix", props.resourcePrefix);
 
     // --- Cognito (Phase 3) ---
-    // LOCAL envs use placeholder Google creds; the hosted UI will
-    // sign in (against LocalStack's mock) but real Google sign-in is
-    // only wired for sandbox/staging/prod.
+    // Google OAuth credentials come from Secrets Manager, not CDK
+    // context. Sandbox/staging/prod reference the manually-created
+    // `smaran/google-oauth` secret in their own account; LOCAL
+    // creates a placeholder secret in LocalStack so the user pool
+    // has something to bind to without requiring a manual step.
     const isLocal = props.envCode === EnvCodes.LOCAL;
+    const googleOAuthSecret: secretsmanager.ISecret = isLocal
+      ? new secretsmanager.Secret(this, "GoogleOAuthSecret", {
+          secretName: GOOGLE_OAUTH_SECRET_NAME,
+          secretStringValue: cdk.SecretValue.unsafePlainText(
+            JSON.stringify({
+              clientId: "local-placeholder-client-id",
+              clientSecret: "local-placeholder-client-secret",
+            }),
+          ),
+        })
+      : secretsmanager.Secret.fromSecretNameV2(
+          this,
+          "GoogleOAuthSecret",
+          GOOGLE_OAUTH_SECRET_NAME,
+        );
+
     this.cognito = new CognitoConstruct(this, "Cognito", {
       envCode: props.envCode,
       resourcePrefix: props.resourcePrefix,
-      googleClientId: isLocal
-        ? "local-placeholder-client-id"
-        : props.googleClientId,
-      googleClientSecret: isLocal
-        ? "local-placeholder-client-secret"
-        : props.googleClientSecret,
+      googleOAuthSecret,
     });
 
     // --- DNS (Phase 3.5) ---

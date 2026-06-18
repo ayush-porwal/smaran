@@ -83,8 +83,8 @@ export type ListItem = {
 // Auth
 export type AuthSession = {
   user: User;
-  // In real life this is a Cognito JWT; for the mock we keep the user
-  // and a synthetic token so consumers can attach it to requests.
+  // Cognito id token (JWT); attached as the bearer token on every
+  // AppSync request.
   token: string;
 };
 

@@ -9,6 +9,7 @@
 // verification message would just be noise).
 import * as cdk from "aws-cdk-lib/core";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 
 import {
@@ -23,18 +24,24 @@ export interface CognitoConstructProps {
   envCode: EnvCodes;
   resourcePrefix: string;
   /**
-   * Google OAuth 2.0 client ID. Create this in Google Cloud Console
-   * (APIs & Services → Credentials → OAuth 2.0 Client IDs → Web
-   * application). Pass via `CDK_CONTEXT_GOOGLE_CLIENT_ID` env var or
-   * `-c googleClientId=...` flag. Required.
+   * The `smaran/google-oauth` Secrets Manager entry holding the
+   * Google OAuth 2.0 client credentials for this env. The secret
+   * value is a JSON object: `{ "clientId": "...", "clientSecret": "..." }`.
+   *
+   * One secret per env (account) — the value differs because the
+   * Google Cloud Console OAuth client differs per env (the
+   * authorised redirect URIs point to the env-specific hosted UI
+   * domain). The secret itself is created manually once per env via
+   * the AWS console or `aws secretsmanager create-secret`; CDK just
+   * references it via a CloudFormation dynamic reference, so the
+   * plaintext never enters the template (and never appears in
+   * `cdk diff` output).
    *
    * Authorised redirect URIs in Google must include the hosted UI
    * domain returned by `hostedUiDomain`, e.g.
    *   https://smaran-sandbox.auth.eu-central-1.amazoncognito.com/oauth2/idpresponse
    */
-  googleClientId: string;
-  /** Google OAuth 2.0 client secret. Same source as `googleClientId`. */
-  googleClientSecret: string;
+  googleOAuthSecret: secretsmanager.ISecret;
 }
 
 export class CognitoConstruct extends Construct {
@@ -45,7 +52,7 @@ export class CognitoConstruct extends Construct {
   constructor(scope: Construct, id: string, props: CognitoConstructProps) {
     super(scope, id);
 
-    const { envCode, resourcePrefix, googleClientId, googleClientSecret } = props;
+    const { envCode, resourcePrefix, googleOAuthSecret } = props;
     const retention = retentionFor(envCode);
     const callbacks = OAUTH_CALLBACKS_BY_ENV[envCode];
 
@@ -92,10 +99,14 @@ export class CognitoConstruct extends Construct {
     // attributes. `sub` auto-maps to `username` (Cognito's
     // internal user handle) so two different Google accounts
     // sharing an email don't collide.
+    //
+    // The client ID + secret come from Secrets Manager via dynamic
+    // references — CloudFormation resolves them at deploy time so
+    // the plaintext never enters the template.
     const google = new cognito.UserPoolIdentityProviderGoogle(this, "Google", {
       userPool: this.userPool,
-      clientId: googleClientId,
-      clientSecretValue: cdk.SecretValue.unsafePlainText(googleClientSecret),
+      clientId: googleOAuthSecret.secretValueFromJson("clientId").toString(),
+      clientSecretValue: googleOAuthSecret.secretValueFromJson("clientSecret"),
       scopes: ["openid", "email", "profile"],
       attributeMapping: {
         email: { attributeName: "email" },

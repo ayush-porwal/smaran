@@ -85,7 +85,6 @@ export class AppSyncConstruct extends Construct {
       description: `smaran (${props.envCode}) AppSync resolver dispatcher`,
     });
 
-    // Grant the Lambda read/write on the 5 tables.
     [props.groupsTable, props.membershipsTable, props.invitesTable, props.listsTable, props.itemsTable].forEach(
       (t) => {
         t.grantReadWriteData(fn);
