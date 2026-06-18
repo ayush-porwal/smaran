@@ -3,7 +3,6 @@ name: deploy-sandbox
 on:
   pull_request:
     branches: [main]
-    types: [opened]
   workflow_dispatch:
 
 # Per-PR concurrency: only one deploy runs per PR at a time, and a
