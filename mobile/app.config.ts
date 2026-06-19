@@ -1,3 +1,4 @@
+/// <reference types="node" />
 // Dynamic app config. Expo evaluates this at build time and merges the
 // static app.json — passed in as `config` — with per-env values.
 //
@@ -8,6 +9,8 @@
 // In local dev: `SMARAN_ENV` is unset, we fall back to
 // `mobile/config/local.json` which has empty values; the sign-in
 // screen detects this and shows a config-missing error.
+import { readFileSync } from "fs";
+import { join } from "path";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 type EnvConfig = {
@@ -20,11 +23,8 @@ type EnvConfig = {
 
 function loadEnv(): EnvConfig {
   const env = process.env.SMARAN_ENV ?? "local";
-  // Dynamic path + Expo's config must be synchronous, so neither a static
-  // `import` nor async `import()` works here — require is the only option.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const cfg = require(`./config/${env}.json`) as EnvConfig;
-  return cfg;
+  const file = join(process.cwd(), "config", `${env}.json`);
+  return JSON.parse(readFileSync(file, "utf8")) as EnvConfig;
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
