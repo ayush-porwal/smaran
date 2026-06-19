@@ -1,0 +1,1 @@
+Always use the gh cli for github related things.
