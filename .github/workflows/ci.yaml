@@ -1,86 +1,29 @@
 name: ci
 
+# PR checks. Thin caller over the reusable workflows; mobile gets its
+# own job (the reference is backend-only).
+
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
   workflow_dispatch:
 
-# Minimal permissions; jobs request what they need via `permissions:` blocks.
 permissions:
   contents: read
 
-# Cancel in-flight runs of the same workflow on the same PR/branch.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.head.label || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: build, test, synth
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+  infra:
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@main
+    with:
+      working-directory: infra
+      node-version: "24.x"
 
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm (infra)
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Cache npm (mobile)
-        uses: actions/cache@v5
-        with:
-          path: mobile/node_modules
-          key: npm-mobile-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
-          restore-keys: npm-mobile-${{ runner.os }}-
-
-      # --- infra checks (the cheap end-to-end AWS sanity tests) ---
-
-      - name: Install (infra)
-        working-directory: infra
-        run: npm ci
-
-      - name: Typecheck (infra)
-        working-directory: infra
-        run: npx tsc --noEmit
-
-      - name: Test (infra)
-        working-directory: infra
-        run: npx jest --ci
-
-      # `cdk synth` is the cheapest end-to-end check we can do without
-      # AWS credentials. On PRs this catches missing imports, broken
-      # cross-stack references, and CDK type errors.
-      - name: cdk synth
-        working-directory: infra
-        run: npx cdk synth --quiet
-        env:
-          # `cdk synth` only looks up context when env-specific
-          # context is requested. We never reference accounts, so an
-          # empty creds profile is fine.
-          AWS_ACCESS_KEY_ID: dummy
-          AWS_SECRET_ACCESS_KEY: dummy
-          AWS_REGION: eu-central-1
-
-      # --- mobile checks (PR-level safety net for the Expo app) ---
-
-      - name: Install (mobile)
-        working-directory: mobile
-        run: npm ci
-
-      - name: Typecheck (mobile)
-        working-directory: mobile
-        run: npx tsc --noEmit
-
-      - name: Lint (mobile)
-        working-directory: mobile
-        run: npm run lint
+  mobile:
+    uses: ayush-porwal/actions/.github/workflows/nodejs-ci.yaml@main
+    with:
+      working-directory: mobile
+      node-version: "24.x"

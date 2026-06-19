@@ -1,48 +1,16 @@
 name: deploy
 
-# Single deploy workflow for sandbox (per-PR + shared), staging, prod.
-# Matches the efdigital/b2s-feedback-campaigns pattern.
+# Push-to-main pipeline: build → staging → prod (the reference chain),
+# plus two smaran additions — mobile-config writing after each deploy
+# and an EAS Android APK build after prod.
 #
-# --- Trigger --------------------------------------------------------
-# Auto-fires AFTER `ci` completes on a push to main. workflow_run only
-# matches workflows on the DEFAULT branch, so the workflow files
-# themselves must live on `main` — once this PR is merged, the
-# workflow registers and subsequent PRs trigger it correctly.
-#
-# --- Job chain ------------------------------------------------------
-#
-#   build (CI re-run) ──┬─► [PR ci run]
-#                       │   resolve
-#                       │   diff_sandbox ──► deploy_sandbox
-#                       │   (per-PR stack: pr{N}-smaran-sandbox)
-#                       │
-#                       └─► [push-to-main ci run]
-#                           resolve
-#                           diff_shared_sandbox ──► deploy_shared_sandbox
-#                           (shared stack: smaran-sandbox — represents
-#                            "the main branch code" for everyone)
-#                           diff_staging ──► deploy_staging
-#                                          └─► prod_ci (CI re-run)
-#                                              diff_prod ──► deploy_prod
-#
-# --- Human-approval gates ------------------------------------------
-# Configure required reviewers in:
-#   Settings → Environments → staging / production → Required reviewers
-#   Settings → Environments → sandbox    → optional
-# The `environment:` on each deploy_* job is where GitHub pauses for
-# approval. `build` and `prod_ci` re-run CI checks (no approval).
-# `diff_*` jobs are also `environment:`-gated so the diff lands in the
-# env's deployment history.
+# Staging and production deploys are gated by GitHub environment
+# required reviewers. The diff jobs are ungated so a reviewer reads the
+# plan before approving the deploy.
+
 on:
-  # Note: do NOT add `branches: [main]` here. workflow_run's branches
-  # filter checks the branch where the ci workflow FILE lives — for PR
-  # runs that's the PR's HEAD branch, not `main`. With `branches: [main]`
-  # workflow_run only fires for push-to-main ci completions and silently
-  # skips PR ci completions. The `resolve` job below differentiates PR
-  # vs push via `pull_requests[0].number`.
-  workflow_run:
-    workflows: [ci]
-    types: [completed]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -50,573 +18,117 @@ permissions:
   id-token: write
 
 jobs:
-  # ----------------------------------------------------------------
-  # CI re-run. workflow_run already guarantees ci just succeeded,
-  # but re-running catches a push between the ci run and the deploy
-  # approval. workflow_dispatch also re-runs as a safety net.
-  # ----------------------------------------------------------------
+  # --- infra CI re-run: gate the whole chain on a green build -------
   build:
-    name: build, test, synth
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@main
+    with:
+      working-directory: infra
+      node-version: "24.x"
 
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm (infra)
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Cache npm (mobile)
-        uses: actions/cache@v5
-        with:
-          path: mobile/node_modules
-          key: npm-mobile-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
-          restore-keys: npm-mobile-${{ runner.os }}-
-
-      - name: Install (infra)
-        working-directory: infra
-        run: npm ci
-
-      - name: Typecheck (infra)
-        working-directory: infra
-        run: npx tsc --noEmit
-
-      - name: Test (infra)
-        working-directory: infra
-        run: npx jest --ci
-
-      - name: Synth (infra)
-        working-directory: infra
-        run: npx cdk synth --quiet
-        env:
-          AWS_ACCESS_KEY_ID: dummy
-          AWS_SECRET_ACCESS_KEY: dummy
-          AWS_REGION: eu-central-1
-
-      - name: Install (mobile)
-        working-directory: mobile
-        run: npm ci
-
-      - name: Typecheck (mobile)
-        working-directory: mobile
-        run: npx tsc --noEmit
-
-      - name: Lint (mobile)
-        working-directory: mobile
-        run: npm run lint
-
-  # ----------------------------------------------------------------
-  # Context resolver. Decides which branch of the chain to run.
-  #   is_pr_run   = "true"  → PR ci run (deploy per-PR sandbox)
-  #   is_pr_run   = "false" → push-to-main ci or workflow_dispatch
-  #                            (deploy shared sandbox + staging + prod)
-  # ----------------------------------------------------------------
-  resolve:
-    name: resolve context
-    needs: build
-    runs-on: ubuntu-latest
-    outputs:
-      is_pr_run: ${{ steps.resolve.outputs.is_pr_run }}
-      pr_number: ${{ steps.resolve.outputs.pr_number }}
-      stack_prefix: ${{ steps.resolve.outputs.stack_prefix }}
-    steps:
-      - name: Resolve context
-        id: resolve
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          {
-            if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-              echo "is_pr_run=false"
-              echo "pr_number="
-              echo "stack_prefix="
-            else
-              # Use workflow_run.event as the source of truth — not
-              # pull_requests[0].number. GitHub populates the
-              # pull_requests array on push-to-main events with the
-              # most recent open PR, which is unrelated to the merge
-              # that triggered this workflow_run. `event` is
-              # "pull_request" | "push" | "workflow_dispatch".
-              TRIGGER_EVENT=$(jq -r '.workflow_run.event // ""' "$GITHUB_EVENT_PATH")
-              if [ "$TRIGGER_EVENT" = "pull_request" ]; then
-                NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")
-                echo "is_pr_run=true"
-                echo "pr_number=$NUMBER"
-                echo "stack_prefix=pr${NUMBER}-"
-              else
-                # push (merge to main) or any other event → shared
-                # sandbox + staging + prod chain.
-                echo "is_pr_run=false"
-                echo "pr_number="
-                echo "stack_prefix="
-              fi
-            fi
-          } >> "$GITHUB_OUTPUT"
-
-  # =================================================================
-  # PR ci run → per-PR sandbox
-  # =================================================================
-  diff_sandbox:
-    name: cdk diff per-PR sandbox
-    needs: resolve
-    if: needs.resolve.outputs.is_pr_run == 'true'
-    runs-on: ubuntu-latest
-    environment: sandbox
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'sandbox-diff'
-
-      - name: cdk diff
-        env:
-          CDK_STACK_PREFIX: ${{ needs.resolve.outputs.stack_prefix }}
-        run: npx cdk diff ${CDK_STACK_PREFIX}smaran-sandbox-eu-central-1
-
-  deploy_sandbox:
-    name: cdk deploy per-PR sandbox
-    needs: diff_sandbox
-    if: needs.resolve.outputs.is_pr_run == 'true'
-    runs-on: ubuntu-latest
-    environment: sandbox
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'sandbox-deploy'
-
-      - name: cdk deploy
-        env:
-          CDK_STACK_PREFIX: ${{ needs.resolve.outputs.stack_prefix }}
-        run: |
-          npx cdk deploy \
-            ${CDK_STACK_PREFIX}smaran-sandbox-eu-central-1 \
-            --require-approval never \
-            --outputs-file cdk-outputs.json
-
-      - name: Expose sandbox outputs
-        if: success()
-        run: |
-          if [ -f cdk-outputs.json ]; then
-            echo "## Sandbox outputs" >> "$GITHUB_STEP_SUMMARY"
-            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Write mobile config (sandbox)
-        if: success()
-        uses: ./.github/actions/write-mobile-config
-        with:
-          stack_name: ${{ needs.resolve.outputs.stack_prefix }}smaran-sandbox-eu-central-1
-          env_code: pr
-          output_filename: ${{ format('pr-{0}.json', needs.resolve.outputs.pr_number) }}
-
-  # =================================================================
-  # push-to-main ci run (or workflow_dispatch) →
-  #   shared sandbox (the "main branch code" canonical env)
-  # =================================================================
-  diff_shared_sandbox:
-    name: cdk diff shared sandbox
-    needs: resolve
-    if: needs.resolve.outputs.is_pr_run != 'true'
-    runs-on: ubuntu-latest
-    environment: sandbox
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'sandbox-diff'
-
-      - name: cdk diff
-        run: npx cdk diff smaran-sandbox-eu-central-1
-
-  deploy_shared_sandbox:
-    name: cdk deploy shared sandbox
-    needs: diff_shared_sandbox
-    if: needs.resolve.outputs.is_pr_run != 'true'
-    runs-on: ubuntu-latest
-    environment: sandbox
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'sandbox-deploy'
-
-      - name: cdk deploy
-        run: npx cdk deploy smaran-sandbox-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
-
-      - name: Expose sandbox outputs
-        if: success()
-        run: |
-          if [ -f cdk-outputs.json ]; then
-            echo "## Sandbox outputs" >> "$GITHUB_STEP_SUMMARY"
-            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Write mobile config (shared sandbox)
-        if: success()
-        uses: ./.github/actions/write-mobile-config
-        with:
-          stack_name: smaran-sandbox-eu-central-1
-          env_code: sandbox
-          output_filename: sandbox.json
-
-  # =================================================================
-  # Staging (push-to-main only). Approval gate at the `staging` env.
-  # =================================================================
+  # --- staging ------------------------------------------------------
   diff_staging:
-    name: cdk diff staging
-    needs: resolve
-    if: needs.resolve.outputs.is_pr_run != 'true'
-    runs-on: ubuntu-latest
-    environment: staging
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'staging-diff'
-
-      - name: cdk diff
-        run: npx cdk diff smaran-staging-eu-central-1
+    needs: build
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff.yaml@main
+    with:
+      aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+      stack_name: smaran-staging-eu-central-1
+      working-directory: infra
+      node-version: "24.x"
 
   deploy_staging:
-    name: cdk deploy staging
     needs: diff_staging
-    if: needs.resolve.outputs.is_pr_run != 'true'
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-deploy.yaml@main
+    with:
+      aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+      stack_name: smaran-staging-eu-central-1
+      environment: staging
+      outputs-artifact: staging-cdk-outputs
+      working-directory: infra
+      node-version: "24.x"
+
+  write_mobile_config_staging:
+    needs: deploy_staging
     runs-on: ubuntu-latest
-    # Human-approval gate. Configure in:
-    #   Settings → Environments → staging → Required reviewers
-    environment: staging
-    defaults:
-      run:
-        working-directory: infra
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Download outputs
+        uses: actions/download-artifact@v7
         with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'staging-deploy'
-
-      - name: cdk deploy
-        run: npx cdk deploy smaran-staging-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
-
-      - name: Expose staging outputs
-        if: success()
-        run: |
-          if [ -f cdk-outputs.json ]; then
-            echo "## Staging outputs" >> "$GITHUB_STEP_SUMMARY"
-            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Write mobile config (staging)
-        if: success()
+          name: staging-cdk-outputs
+          path: infra
+      - name: Write mobile config
         uses: ./.github/actions/write-mobile-config
         with:
+          outputs_file: infra/cdk-outputs.json
           stack_name: smaran-staging-eu-central-1
           env_code: staging
           output_filename: staging.json
 
-  # ----------------------------------------------------------------
-  # Prod CI: separate CI re-run after staging succeeds. Gates the
-  # prod deploy so a stale approval can't accidentally land code that
-  # no longer passes the checks.
-  # ----------------------------------------------------------------
-  prod_ci:
-    name: prod CI (re-run checks)
-    needs: deploy_staging
-    if: needs.resolve.outputs.is_pr_run != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm (infra)
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Cache npm (mobile)
-        uses: actions/cache@v5
-        with:
-          path: mobile/node_modules
-          key: npm-mobile-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
-          restore-keys: npm-mobile-${{ runner.os }}-
-
-      - name: Install (infra)
-        working-directory: infra
-        run: npm ci
-
-      - name: Typecheck (infra)
-        working-directory: infra
-        run: npx tsc --noEmit
-
-      - name: Test (infra)
-        working-directory: infra
-        run: npx jest --ci
-
-      - name: Synth (infra)
-        working-directory: infra
-        run: npx cdk synth --quiet
-        env:
-          AWS_ACCESS_KEY_ID: dummy
-          AWS_SECRET_ACCESS_KEY: dummy
-          AWS_REGION: eu-central-1
-
-      - name: Install (mobile)
-        working-directory: mobile
-        run: npm ci
-
-      - name: Typecheck (mobile)
-        working-directory: mobile
-        run: npx tsc --noEmit
-
-      - name: Lint (mobile)
-        working-directory: mobile
-        run: npm run lint
-
-  # =================================================================
-  # Prod (after prod_ci passes). Approval gate at the `production` env.
-  # =================================================================
+  # --- prod (after staging deploys) ---------------------------------
   diff_prod:
-    name: cdk diff prod
-    needs: prod_ci
-    if: needs.resolve.outputs.is_pr_run != 'true'
-    runs-on: ubuntu-latest
-    environment: production
-    defaults:
-      run:
-        working-directory: infra
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'prod-diff'
-
-      - name: cdk diff
-        run: npx cdk diff smaran-production-eu-central-1
+    needs: deploy_staging
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff.yaml@main
+    with:
+      aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+      stack_name: smaran-production-eu-central-1
+      working-directory: infra
+      node-version: "24.x"
 
   deploy_prod:
-    name: cdk deploy prod
     needs: diff_prod
-    if: needs.resolve.outputs.is_pr_run != 'true'
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-deploy.yaml@main
+    with:
+      aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+      stack_name: smaran-production-eu-central-1
+      environment: production
+      outputs-artifact: prod-cdk-outputs
+      working-directory: infra
+      node-version: "24.x"
+
+  write_mobile_config_prod:
+    needs: deploy_prod
     runs-on: ubuntu-latest
-    # Human-approval gate. Configure in:
-    #   Settings → Environments → production → Required reviewers
-    environment: production
-    defaults:
-      run:
-        working-directory: infra
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Download outputs
+        uses: actions/download-artifact@v7
         with:
-          ref: ${{ github.sha }}
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-
-      - name: Cache npm
-        uses: actions/cache@v5
-        with:
-          path: infra/node_modules
-          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
-          restore-keys: npm-infra-${{ runner.os }}-
-
-      - name: Install
-        run: npm ci
-
-      - name: Assume OIDC role
-        uses: ./.github/actions/assume-deployer
-        with:
-          session_suffix: 'prod-deploy'
-
-      - name: cdk deploy
-        run: npx cdk deploy smaran-production-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
-
-      - name: Expose prod outputs
-        if: success()
-        run: |
-          if [ -f cdk-outputs.json ]; then
-            echo "## Prod outputs" >> "$GITHUB_STEP_SUMMARY"
-            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Write mobile config (prod)
-        if: success()
+          name: prod-cdk-outputs
+          path: infra
+      - name: Write mobile config
         uses: ./.github/actions/write-mobile-config
         with:
+          outputs_file: infra/cdk-outputs.json
           stack_name: smaran-production-eu-central-1
           env_code: prod
           output_filename: prod.json
+      # Hand the freshly written prod config to the EAS build job — it
+      # runs on a clean runner and the file is gitignored.
+      - name: Upload prod mobile config
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-config-prod
+          path: mobile/config/prod.json
+          if-no-files-found: error
+          retention-days: 7
+
+  # --- mobile APK (prod config baked in) ----------------------------
+  build_android:
+    needs: write_mobile_config_prod
+    uses: ayush-porwal/actions/.github/workflows/eas-build.yaml@main
+    with:
+      working-directory: mobile
+      node-version: "24.x"
+      platform: android
+      profile: production
+      smaran_env: prod
+      config-artifact: mobile-config-prod
+      artifact-name: smaran-android-apk
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
