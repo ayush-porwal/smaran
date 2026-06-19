@@ -34,10 +34,15 @@ name: deploy
 # `diff_*` jobs are also `environment:`-gated so the diff lands in the
 # env's deployment history.
 on:
+  # Note: do NOT add `branches: [main]` here. workflow_run's branches
+  # filter checks the branch where the ci workflow FILE lives — for PR
+  # runs that's the PR's HEAD branch, not `main`. With `branches: [main]`
+  # workflow_run only fires for push-to-main ci completions and silently
+  # skips PR ci completions. The `resolve` job below differentiates PR
+  # vs push via `pull_requests[0].number`.
   workflow_run:
     workflows: [ci]
     types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
