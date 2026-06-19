@@ -1,31 +1,48 @@
 name: deploy
 
-# Single deploy workflow for sandbox, staging, and prod —
-# matches the efdigital/b2s-feedback-campaigns pattern.
+# Single deploy workflow for sandbox (per-PR + shared), staging, prod.
+# Matches the efdigital/b2s-feedback-campaigns pattern.
 #
-# Auto-triggers AFTER `ci` completes:
-#   - On a PR ci run → only the sandbox jobs run
-#     (diff_sandbox + deploy_sandbox). Each PR gets its own
-#     per-PR sandbox stack (`pr1-smaran-sandbox`,
-#     `pr2-smaran-sandbox`, …) so concurrent previews don't
-#     collide.
-#   - On a push-to-main ci run → only the staging + prod jobs
-#     run, but each deploy job pauses for human approval at
-#     its `environment:` gate (configure required reviewers in
-#     repo Settings → Environments).
+# --- Trigger --------------------------------------------------------
+# Auto-fires AFTER `ci` completes on a push to main. workflow_run only
+# matches workflows on the DEFAULT branch, so the workflow files
+# themselves must live on `main` — once this PR is merged, the
+# workflow registers and subsequent PRs trigger it correctly.
 #
-# Manual override via `workflow_dispatch` for ad-hoc deploys
-# (e.g. retrying a failed prod deploy).
+# --- Job chain ------------------------------------------------------
 #
-# Job chain:
-#   build → resolve →┬─ diff_sandbox → deploy_sandbox  (PR only)
-#                    ├─ diff_staging → deploy_staging  (push/main or dispatch)
-#                    └─ diff_prod → deploy_prod        (after deploy_staging)
+#   build (CI re-run) ──┬─► [PR ci run]
+#                       │   resolve
+#                       │   diff_sandbox ──► deploy_sandbox
+#                       │   (per-PR stack: pr{N}-smaran-sandbox)
+#                       │
+#                       └─► [push-to-main ci run]
+#                           resolve
+#                           diff_shared_sandbox ──► deploy_shared_sandbox
+#                           (shared stack: smaran-sandbox — represents
+#                            "the main branch code" for everyone)
+#                           diff_staging ──► deploy_staging
+#                                          └─► prod_ci (CI re-run)
+#                                              diff_prod ──► deploy_prod
+#
+# --- Human-approval gates ------------------------------------------
+# Configure required reviewers in:
+#   Settings → Environments → staging / production → Required reviewers
+#   Settings → Environments → sandbox    → optional
+# The `environment:` on each deploy_* job is where GitHub pauses for
+# approval. `build` and `prod_ci` re-run CI checks (no approval).
+# `diff_*` jobs are also `environment:`-gated so the diff lands in the
+# env's deployment history.
 on:
+  # Note: do NOT add `branches: [main]` here. workflow_run's branches
+  # filter checks the branch where the ci workflow FILE lives — for PR
+  # runs that's the PR's HEAD branch, not `main`. With `branches: [main]`
+  # workflow_run only fires for push-to-main ci completions and silently
+  # skips PR ci completions. The `resolve` job below differentiates PR
+  # vs push via `pull_requests[0].number`.
   workflow_run:
     workflows: [ci]
     types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -33,11 +50,11 @@ permissions:
   id-token: write
 
 jobs:
-  # --- CI gate (matches reference). Re-runs ci.yaml's checks
-  # on the same SHA. workflow_run guarantees ci just succeeded,
-  # but re-running catches pushes between the ci run and the
-  # human approval. workflow_dispatch also re-runs as a safety
-  # net. ---
+  # ----------------------------------------------------------------
+  # CI re-run. workflow_run already guarantees ci just succeeded,
+  # but re-running catches a push between the ci run and the deploy
+  # approval. workflow_dispatch also re-runs as a safety net.
+  # ----------------------------------------------------------------
   build:
     name: build, test, synth
     runs-on: ubuntu-latest
@@ -79,6 +96,10 @@ jobs:
       - name: Synth (infra)
         working-directory: infra
         run: npx cdk synth --quiet
+        env:
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy
+          AWS_REGION: eu-central-1
 
       - name: Install (mobile)
         working-directory: mobile
@@ -92,20 +113,20 @@ jobs:
         working-directory: mobile
         run: npm run lint
 
-  # --- Context resolver: figures out which PR (for per-PR
-  # sandbox) and whether this is a PR or push-to-main ci run.
-  # workflow_dispatch has no PR context (manual runs deploy
-  # to shared envs). ---
+  # ----------------------------------------------------------------
+  # Context resolver. Decides which branch of the chain to run.
+  #   is_pr_run   = "true"  → PR ci run (deploy per-PR sandbox)
+  #   is_pr_run   = "false" → push-to-main ci or workflow_dispatch
+  #                            (deploy shared sandbox + staging + prod)
+  # ----------------------------------------------------------------
   resolve:
     name: resolve context
     needs: build
     runs-on: ubuntu-latest
     outputs:
+      is_pr_run: ${{ steps.resolve.outputs.is_pr_run }}
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       stack_prefix: ${{ steps.resolve.outputs.stack_prefix }}
-      # "true" if this is a PR ci run (sandbox should deploy).
-      # "false" if push-to-main or workflow_dispatch.
-      is_pr_run: ${{ steps.resolve.outputs.is_pr_run }}
     steps:
       - name: Resolve context
         id: resolve
@@ -114,29 +135,30 @@ jobs:
         run: |
           {
             if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-              echo "pr_number=manual"
-              echo "stack_prefix="
               echo "is_pr_run=false"
+              echo "pr_number="
+              echo "stack_prefix="
             else
               # workflow_run from ci. PR runs have a non-empty
-              # `pull_requests` array; push-to-main runs have
-              # an empty one.
+              # pull_requests array; push-to-main runs are empty.
               NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")
               if [ -n "$NUMBER" ]; then
+                echo "is_pr_run=true"
                 echo "pr_number=$NUMBER"
                 echo "stack_prefix=pr${NUMBER}-"
-                echo "is_pr_run=true"
               else
+                echo "is_pr_run=false"
                 echo "pr_number="
                 echo "stack_prefix="
-                echo "is_pr_run=false"
               fi
             fi
           } >> "$GITHUB_OUTPUT"
 
-  # --- Per-PR sandbox (PR ci runs only) ---
+  # =================================================================
+  # PR ci run → per-PR sandbox
+  # =================================================================
   diff_sandbox:
-    name: cdk diff sandbox
+    name: cdk diff per-PR sandbox
     needs: resolve
     if: needs.resolve.outputs.is_pr_run == 'true'
     runs-on: ubuntu-latest
@@ -176,12 +198,10 @@ jobs:
         run: npx cdk diff ${CDK_STACK_PREFIX}smaran-sandbox-eu-central-1
 
   deploy_sandbox:
-    name: cdk deploy sandbox
+    name: cdk deploy per-PR sandbox
     needs: diff_sandbox
     if: needs.resolve.outputs.is_pr_run == 'true'
     runs-on: ubuntu-latest
-    # Human-approval gate. Configure in:
-    #   Settings → Environments → sandbox → Required reviewers
     environment: sandbox
     defaults:
       run:
@@ -214,8 +234,6 @@ jobs:
 
       - name: cdk deploy
         env:
-          # `infra/bin/smaran.ts` reads CDK_STACK_PREFIX; when set
-          # it prefixes the sandbox stack (`pr1-smaran-sandbox`).
           CDK_STACK_PREFIX: ${{ needs.resolve.outputs.stack_prefix }}
         run: |
           npx cdk deploy \
@@ -239,7 +257,105 @@ jobs:
           env_code: pr
           output_filename: ${{ format('pr-{0}.json', needs.resolve.outputs.pr_number) }}
 
-  # --- Staging (push-to-main ci runs + workflow_dispatch) ---
+  # =================================================================
+  # push-to-main ci run (or workflow_dispatch) →
+  #   shared sandbox (the "main branch code" canonical env)
+  # =================================================================
+  diff_shared_sandbox:
+    name: cdk diff shared sandbox
+    needs: resolve
+    if: needs.resolve.outputs.is_pr_run != 'true'
+    runs-on: ubuntu-latest
+    environment: sandbox
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume OIDC role
+        uses: ./.github/actions/assume-deployer
+        with:
+          session_suffix: 'sandbox-diff'
+
+      - name: cdk diff
+        run: npx cdk diff smaran-sandbox-eu-central-1
+
+  deploy_shared_sandbox:
+    name: cdk deploy shared sandbox
+    needs: diff_shared_sandbox
+    if: needs.resolve.outputs.is_pr_run != 'true'
+    runs-on: ubuntu-latest
+    environment: sandbox
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Install
+        run: npm ci
+
+      - name: Assume OIDC role
+        uses: ./.github/actions/assume-deployer
+        with:
+          session_suffix: 'sandbox-deploy'
+
+      - name: cdk deploy
+        run: npx cdk deploy smaran-sandbox-eu-central-1 --require-approval never --outputs-file cdk-outputs.json
+
+      - name: Expose sandbox outputs
+        if: success()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "## Sandbox outputs" >> "$GITHUB_STEP_SUMMARY"
+            cat cdk-outputs.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Write mobile config (shared sandbox)
+        if: success()
+        uses: ./.github/actions/write-mobile-config
+        with:
+          stack_name: smaran-sandbox-eu-central-1
+          env_code: sandbox
+          output_filename: sandbox.json
+
+  # =================================================================
+  # Staging (push-to-main only). Approval gate at the `staging` env.
+  # =================================================================
   diff_staging:
     name: cdk diff staging
     needs: resolve
@@ -283,7 +399,7 @@ jobs:
     needs: diff_staging
     if: needs.resolve.outputs.is_pr_run != 'true'
     runs-on: ubuntu-latest
-    # Human-approval gate. Configure required reviewers in:
+    # Human-approval gate. Configure in:
     #   Settings → Environments → staging → Required reviewers
     environment: staging
     defaults:
@@ -334,10 +450,79 @@ jobs:
           env_code: staging
           output_filename: staging.json
 
-  # --- Prod (only after staging succeeds, push-to-main or dispatch) ---
+  # ----------------------------------------------------------------
+  # Prod CI: separate CI re-run after staging succeeds. Gates the
+  # prod deploy so a stale approval can't accidentally land code that
+  # no longer passes the checks.
+  # ----------------------------------------------------------------
+  prod_ci:
+    name: prod CI (re-run checks)
+    needs: deploy_staging
+    if: needs.resolve.outputs.is_pr_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Cache npm (infra)
+        uses: actions/cache@v5
+        with:
+          path: infra/node_modules
+          key: npm-infra-${{ runner.os }}-${{ hashFiles('infra/package-lock.json') }}
+          restore-keys: npm-infra-${{ runner.os }}-
+
+      - name: Cache npm (mobile)
+        uses: actions/cache@v5
+        with:
+          path: mobile/node_modules
+          key: npm-mobile-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json') }}
+          restore-keys: npm-mobile-${{ runner.os }}-
+
+      - name: Install (infra)
+        working-directory: infra
+        run: npm ci
+
+      - name: Typecheck (infra)
+        working-directory: infra
+        run: npx tsc --noEmit
+
+      - name: Test (infra)
+        working-directory: infra
+        run: npx jest --ci
+
+      - name: Synth (infra)
+        working-directory: infra
+        run: npx cdk synth --quiet
+        env:
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy
+          AWS_REGION: eu-central-1
+
+      - name: Install (mobile)
+        working-directory: mobile
+        run: npm ci
+
+      - name: Typecheck (mobile)
+        working-directory: mobile
+        run: npx tsc --noEmit
+
+      - name: Lint (mobile)
+        working-directory: mobile
+        run: npm run lint
+
+  # =================================================================
+  # Prod (after prod_ci passes). Approval gate at the `production` env.
+  # =================================================================
   diff_prod:
     name: cdk diff prod
-    needs: deploy_staging
+    needs: prod_ci
     if: needs.resolve.outputs.is_pr_run != 'true'
     runs-on: ubuntu-latest
     environment: production
@@ -378,7 +563,7 @@ jobs:
     needs: diff_prod
     if: needs.resolve.outputs.is_pr_run != 'true'
     runs-on: ubuntu-latest
-    # Human-approval gate. Configure required reviewers in:
+    # Human-approval gate. Configure in:
     #   Settings → Environments → production → Required reviewers
     environment: production
     defaults:

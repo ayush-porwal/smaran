@@ -23,10 +23,13 @@ name: build-mobile
 # --------------------------------------------------------------------
 
 on:
+  # Note: do NOT add `branches: [main]` here. workflow_run's branches
+  # filter checks the branch where the ci workflow FILE lives — for PR
+  # runs that's the PR's HEAD branch, not `main`. The `if:` on the
+  # build-android job below already filters out PR runs.
   workflow_run:
     workflows: [ci]
     types: [completed]
-    branches: [main]
 
 # No concurrency group: EAS builds run on Expo's servers, not here.
 # Cancelling this workflow does NOT cancel an in-flight EAS build, and

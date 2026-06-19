@@ -1,8 +1,11 @@
 name: destroy-sandbox
 
 # Tears down `pr{N}-smaran-sandbox-eu-central-1` when a PR is
-# closed (without merge). The stack is created by deploy-sandbox.yaml
-# on PR open/sync and lives for the lifetime of the PR.
+# closed — including merges. The stack is created by deploy.yaml's
+# `deploy_sandbox` job on PR open/sync. On merge, the per-PR stack
+# is destroyed and the shared `smaran-sandbox` stack is deployed by
+# deploy.yaml's `deploy_shared_sandbox` job (the canonical "main
+# branch code" env).
 
 on:
   pull_request:
@@ -17,9 +20,6 @@ jobs:
   destroy:
     name: destroy pr-${{ github.event.pull_request.number }}
     runs-on: ubuntu-latest
-    # Skip if the PR was merged — staging deploys on push-to-main, and
-    # the sandbox stack was already torn down as part of the close.
-    if: github.event.pull_request.merged == false
     defaults:
       run:
         working-directory: infra
