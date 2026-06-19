@@ -11,8 +11,10 @@ import type {
   GroupMembership,
   GroupWithMeta,
   Invite,
+  InviteLink,
   List,
   ListItem,
+  Role,
   User,
 } from './types';
 
@@ -170,6 +172,29 @@ const Q_ITEMS_IN_LIST = /* GraphQL */ `
   }
 `;
 
+const Q_PENDING_INVITES = /* GraphQL */ `
+  query PendingInvites {
+    pendingInvites {
+      id
+      groupId
+      email
+      invitedBy
+      status
+      createdAt
+      expiresAt
+      group {
+        id
+        name
+        emoji
+        color
+        createdBy
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
 // --- Mutations ---
 
 const M_CREATE_GROUP = /* GraphQL */ `
@@ -197,6 +222,81 @@ const M_INVITE_TO_GROUP = /* GraphQL */ `
       createdAt
       expiresAt
     }
+  }
+`;
+
+const M_ACCEPT_INVITE = /* GraphQL */ `
+  mutation AcceptInvite($inviteId: ID!) {
+    acceptInvite(inviteId: $inviteId) {
+      id
+      name
+      emoji
+      color
+      createdBy
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+const M_CREATE_INVITE_LINK = /* GraphQL */ `
+  mutation CreateGroupInviteLink($groupId: ID!) {
+    createGroupInviteLink(groupId: $groupId) {
+      groupId
+      token
+      createdBy
+      createdAt
+      expiresAt
+    }
+  }
+`;
+
+const M_JOIN_VIA_LINK = /* GraphQL */ `
+  mutation JoinGroupViaLink($groupId: ID!, $token: String!) {
+    joinGroupViaLink(groupId: $groupId, token: $token) {
+      id
+      name
+      emoji
+      color
+      createdBy
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+const M_SET_MEMBER_ROLE = /* GraphQL */ `
+  mutation SetMemberRole($groupId: ID!, $userId: ID!, $role: Role!) {
+    setMemberRole(groupId: $groupId, userId: $userId, role: $role) {
+      groupId
+      userId
+      role
+      joinedAt
+      user {
+        id
+        email
+        name
+        createdAt
+      }
+    }
+  }
+`;
+
+const M_REMOVE_MEMBER = /* GraphQL */ `
+  mutation RemoveMember($groupId: ID!, $userId: ID!) {
+    removeMember(groupId: $groupId, userId: $userId)
+  }
+`;
+
+const M_LEAVE_GROUP = /* GraphQL */ `
+  mutation LeaveGroup($groupId: ID!) {
+    leaveGroup(groupId: $groupId)
+  }
+`;
+
+const M_DELETE_GROUP = /* GraphQL */ `
+  mutation DeleteGroup($groupId: ID!) {
+    deleteGroup(groupId: $groupId)
   }
 `;
 
@@ -301,6 +401,67 @@ export async function inviteToGroup(
 ): Promise<Invite> {
   const data = await gql<{ inviteToGroup: Invite }>(M_INVITE_TO_GROUP, { groupId, email });
   return data.inviteToGroup;
+}
+
+// Invites addressed to the signed-in user's email that are still pending.
+export async function listPendingInvites(): Promise<Invite[]> {
+  const data = await gql<{ pendingInvites: Invite[] }>(Q_PENDING_INVITES);
+  return data.pendingInvites;
+}
+
+// Accept an invite; the caller becomes a member and the resolved group
+// is returned so the UI can navigate straight into it.
+export async function acceptInvite(inviteId: string): Promise<Group> {
+  const data = await gql<{ acceptInvite: Group }>(M_ACCEPT_INVITE, { inviteId });
+  return data.acceptInvite;
+}
+
+// Create (or reuse) a shareable invite link for a group. Admin-only.
+export async function createGroupInviteLink(groupId: string): Promise<InviteLink> {
+  const data = await gql<{ createGroupInviteLink: InviteLink }>(M_CREATE_INVITE_LINK, {
+    groupId,
+  });
+  return data.createGroupInviteLink;
+}
+
+// Join a group from a shared link's token. Any signed-in user can call
+// this; the resolved group is returned so the UI can navigate into it.
+export async function joinGroupViaLink(groupId: string, token: string): Promise<Group> {
+  const data = await gql<{ joinGroupViaLink: Group }>(M_JOIN_VIA_LINK, { groupId, token });
+  return data.joinGroupViaLink;
+}
+
+// --- Membership / role management (admin-only on the backend) ---
+
+// Promote a member to admin or demote an admin to member. The backend
+// refuses to demote the last admin.
+export async function setMemberRole(
+  groupId: string,
+  userId: string,
+  role: Role,
+): Promise<GroupMembership & { user: User }> {
+  const data = await gql<{ setMemberRole: GroupMembership & { user: User } }>(
+    M_SET_MEMBER_ROLE,
+    { groupId, userId, role },
+  );
+  return data.setMemberRole;
+}
+
+// Remove someone else from the group (use `leaveGroup` to remove yourself).
+export async function removeMember(groupId: string, userId: string): Promise<void> {
+  await gql<{ removeMember: boolean }>(M_REMOVE_MEMBER, { groupId, userId });
+}
+
+// Leave a group. If you're the sole member the group is deleted; if
+// you're the last admin with others still in it, the backend refuses
+// until you hand off admin (or delete the group).
+export async function leaveGroup(groupId: string): Promise<void> {
+  await gql<{ leaveGroup: boolean }>(M_LEAVE_GROUP, { groupId });
+}
+
+// Delete a group and everything in it (admin-only).
+export async function deleteGroup(groupId: string): Promise<void> {
+  await gql<{ deleteGroup: boolean }>(M_DELETE_GROUP, { groupId });
 }
 
 export async function listsInGroup(groupId: string): Promise<List[]> {

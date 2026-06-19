@@ -120,7 +120,13 @@ export class AppSyncConstruct extends Construct {
     ];
     const mutationFields = [
       "createGroup",
+      "deleteGroup",
       "inviteToGroup",
+      "createGroupInviteLink",
+      "joinGroupViaLink",
+      "setMemberRole",
+      "removeMember",
+      "leaveGroup",
       "createList",
       "deleteList",
       "addItem",

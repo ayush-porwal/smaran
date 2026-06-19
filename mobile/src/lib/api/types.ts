@@ -52,6 +52,19 @@ export type Invite = {
   status: InviteStatus;
   createdAt: ISODateString;
   expiresAt: ISODateString;
+  // Present on invites returned by `listPendingInvites` so the UI can
+  // name the group; absent on the invite returned by `inviteToGroup`.
+  group?: Group;
+};
+
+// A shareable, non-email-bound group invite link. Anyone signed in who
+// opens a link carrying this token joins the group.
+export type InviteLink = {
+  groupId: ID;
+  token: string;
+  createdBy: ID;
+  createdAt: ISODateString;
+  expiresAt: ISODateString;
 };
 
 // Lists (and items)

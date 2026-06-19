@@ -1,13 +1,22 @@
-// Inter is the only typeface. We use @tamagui/font-inter which ships
-// the OTF files and CSS; the babel plugin extracts the @font-face
-// declarations and Metro bundles the font payloads. createInterFont
-// returns a Tamagui font object — we override the default sizes,
-// lineHeights, weights, and letter-spacings to match the spec's
-// section 4.2 type scale.
-import { createInterFont } from '@tamagui/font-inter';
+// System UI fonts on every platform. Native uses the OS default (SF on
+// iOS, Roboto on Android); web uses the standard system-ui stack. We
+// keep the same size/weight/line-height scale as before — only the
+// family changes.
+// Use @tamagui/core's platform flags rather than react-native's
+// `Platform`. The Tamagui babel plugin statically loads this config in
+// Node (no react-native runtime), so importing `react-native` here made
+// config evaluation throw → "Missing themes" → compile-time styles
+// silently disabled. @tamagui/core is loadable in that context.
+import { createFont, isWeb, isIos } from "@tamagui/core";
 
-export const bodyFont = createInterFont({
-  family: 'Inter',
+const systemFamily = isWeb
+  ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+  : isIos
+    ? "System"
+    : "sans-serif";
+
+const fontConfig = {
+  family: systemFamily,
   // Size tokens mirror the spec's pixel scale. Tamagui sizes double as
   // an indexable scale (size.$4), so a 13 -> 4 mapping is intentional.
   size: {
@@ -44,15 +53,15 @@ export const bodyFont = createInterFont({
   // Spec section 4.2 weight assignments. Tamagui's weight keys are
   // strings or numbers; we use numbers for compactness.
   weight: {
-    1: '400',
-    2: '400',
-    3: '400',
-    4: '500',
-    5: '500',
-    6: '600',
-    7: '600',
-    8: '700',
-    9: '700',
+    1: "400",
+    2: "400",
+    3: "400",
+    4: "500",
+    5: "500",
+    6: "600",
+    7: "600",
+    8: "700",
+    9: "700",
   },
   // Spec section 4.2 letter spacings. Display sizes tighten; body stays
   // at 0; labels widen slightly.
@@ -71,7 +80,9 @@ export const bodyFont = createInterFont({
     12: -1,
     13: -1.5,
   },
-});
+} as const;
+
+export const bodyFont = createFont(fontConfig);
 
 // Same family for headings; tokens stay shared.
 export const headingFont = bodyFont;
@@ -81,23 +92,79 @@ export const headingFont = bodyFont;
 // `fontWeight` is keyed against the `weight` index above.
 export const textVariants = {
   // Display
-  'display.lg': { fontSize: 13, lineHeight: 13, fontWeight: '8' as const, letterSpacing: -1.5 },
-  'display.md': { fontSize: 11, lineHeight: 12, fontWeight: '8' as const, letterSpacing: -1 },
-  'display.sm': { fontSize: 9, lineHeight: 10, fontWeight: '7' as const, letterSpacing: -0.5 },
+  "display.lg": {
+    fontSize: 13,
+    lineHeight: 13,
+    fontWeight: "8" as const,
+    letterSpacing: -1.5,
+  },
+  "display.md": {
+    fontSize: 11,
+    lineHeight: 12,
+    fontWeight: "8" as const,
+    letterSpacing: -1,
+  },
+  "display.sm": {
+    fontSize: 9,
+    lineHeight: 10,
+    fontWeight: "7" as const,
+    letterSpacing: -0.5,
+  },
 
   // Headings
-  'heading.lg': { fontSize: 9, lineHeight: 9, fontWeight: '6' as const, letterSpacing: -0.5 },
-  'heading.md': { fontSize: 8, lineHeight: 8, fontWeight: '6' as const, letterSpacing: -0.25 },
-  'heading.sm': { fontSize: 6, lineHeight: 6, fontWeight: '6' as const, letterSpacing: 0 },
+  "heading.lg": {
+    fontSize: 9,
+    lineHeight: 9,
+    fontWeight: "6" as const,
+    letterSpacing: -0.5,
+  },
+  "heading.md": {
+    fontSize: 8,
+    lineHeight: 8,
+    fontWeight: "6" as const,
+    letterSpacing: -0.25,
+  },
+  "heading.sm": {
+    fontSize: 6,
+    lineHeight: 6,
+    fontWeight: "6" as const,
+    letterSpacing: 0,
+  },
 
   // Body
-  'body.lg': { fontSize: 6, lineHeight: 6, fontWeight: '1' as const, letterSpacing: 0 },
-  'body.md': { fontSize: 4, lineHeight: 4, fontWeight: '1' as const, letterSpacing: 0 },
-  'body.sm': { fontSize: 2, lineHeight: 2, fontWeight: '1' as const, letterSpacing: 0.1 },
+  "body.lg": {
+    fontSize: 6,
+    lineHeight: 6,
+    fontWeight: "1" as const,
+    letterSpacing: 0,
+  },
+  "body.md": {
+    fontSize: 4,
+    lineHeight: 4,
+    fontWeight: "1" as const,
+    letterSpacing: 0,
+  },
+  "body.sm": {
+    fontSize: 2,
+    lineHeight: 2,
+    fontWeight: "1" as const,
+    letterSpacing: 0.1,
+  },
 
   // Labels
-  'label.md': { fontSize: 2, lineHeight: 2, fontWeight: '4' as const, letterSpacing: 0.5 },
-  'label.sm': { fontSize: 1, lineHeight: 1, fontWeight: '4' as const, letterSpacing: 1, textTransform: 'uppercase' as const },
+  "label.md": {
+    fontSize: 2,
+    lineHeight: 2,
+    fontWeight: "4" as const,
+    letterSpacing: 0.5,
+  },
+  "label.sm": {
+    fontSize: 1,
+    lineHeight: 1,
+    fontWeight: "4" as const,
+    letterSpacing: 1,
+    textTransform: "uppercase" as const,
+  },
 } as const;
 
 export type TextVariant = keyof typeof textVariants;

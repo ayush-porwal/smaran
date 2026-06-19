@@ -19,6 +19,7 @@ import {
 import { signIn as cognitoSignIn } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 import { isConfigured } from '@/lib/config';
+import { takePendingInvite } from '@/lib/pendingInvite';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -37,7 +38,17 @@ export default function SignInScreen() {
     setSubmitting(true);
     try {
       await cognitoSignIn();
-      router.replace('/(app)' as never);
+      // If they arrived via an invite link before signing in, resume the
+      // join now that they're authenticated; otherwise go to the app.
+      const pending = await takePendingInvite();
+      if (pending) {
+        router.replace({
+          pathname: '/join',
+          params: { g: pending.groupId, t: pending.token },
+        } as never);
+      } else {
+        router.replace('/(app)' as never);
+      }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Sign in failed';
       toast.show({ kind: 'error', message });

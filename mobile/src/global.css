@@ -1,21 +1,16 @@
 /* Web-only global stylesheet.
  *
- * Inter is loaded from Google Fonts (the @tamagui/font-inter OTF payloads
- * are reliable on native, but Metro's CSS-in-JS handling of the data
- * URIs has been flaky on web in SDK 56). For web we get the same
- * family + weights via the CDN.
- *
- * The body-level font-family is a belt-and-braces fallback in case a
+ * Uses the system UI font stack — no custom webfont download. The
+ * body-level font-family is a belt-and-braces fallback in case a
  * Tamagui view renders before its theme attaches.
  */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 html,
 body,
 #root {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

@@ -2,10 +2,10 @@
 // leading checkbox toggles the item via `toggleItem`; the row animates
 // the strike-through and dim transition from the `Checkable` motion
 // pattern. The composer at the bottom adds items via `addItem`.
-import { useCallback, useEffect, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Plus, Trash } from 'phosphor-react-native';
-import { YStack, View, XStack } from 'tamagui';
+import { useCallback, useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ArrowLeftIcon, PlusIcon, TrashIcon } from "phosphor-react-native";
+import { YStack, View, XStack } from "tamagui";
 
 import {
   Checkable,
@@ -18,7 +18,7 @@ import {
   Text,
   TextField,
   useToast,
-} from '@/design-system';
+} from "@/design-system";
 import {
   addItem,
   ApiError,
@@ -28,8 +28,8 @@ import {
   toggleItem,
   type List as ListModel,
   type ListItem as ListItemModel,
-} from '@/lib/api';
-import { useStoreVersion } from '@/lib/api/useStoreVersion';
+} from "@/lib/api";
+import { useStoreVersion } from "@/lib/api/useStoreVersion";
 
 type ItemRowProps = {
   item: ListItemModel;
@@ -43,11 +43,11 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
       onRightSwipe={
         item.checked
           ? undefined
-          : { label: 'Done', tone: 'accent', onAction: () => onToggle(item.id) }
+          : { label: "Done", tone: "accent", onAction: () => onToggle(item.id) }
       }
       onLeftSwipe={
         item.checked
-          ? { label: 'Undo', tone: 'muted', onAction: () => onToggle(item.id) }
+          ? { label: "Undo", tone: "muted", onAction: () => onToggle(item.id) }
           : undefined
       }
     >
@@ -67,9 +67,9 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
             width={22}
             height={22}
             borderRadius="$sm"
-            borderColor={item.checked ? '$accent' : '$borderStrong'}
+            borderColor={item.checked ? "$accent" : "$borderStrong"}
             borderWidth={1.5}
-            backgroundColor={item.checked ? '$accent' : 'transparent'}
+            backgroundColor={item.checked ? "$accent" : "transparent"}
             alignItems="center"
             justifyContent="center"
           >
@@ -92,7 +92,12 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
             hitSlop={8}
           >
             <View padding="$2">
-              <Icon icon={Trash} tone="textTertiary" size={18} weight="regular" />
+              <Icon
+                icon={TrashIcon}
+                tone="textTertiary"
+                size={18}
+                weight="regular"
+              />
             </View>
           </Pressable>
         </XStack>
@@ -105,11 +110,11 @@ export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
-  const listVersion = useStoreVersion(`list:${id ?? ''}`);
+  const listVersion = useStoreVersion(`list:${id ?? ""}`);
 
   const [list, setList] = useState<ListModel | null>(null);
   const [items, setItems] = useState<ListItemModel[]>([]);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -123,7 +128,10 @@ export default function ListDetailScreen() {
       })
       .catch((err) => {
         if (cancelled) return;
-        toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+        toast.show({
+          kind: "error",
+          message: err instanceof ApiError ? err.message : "Failed",
+        });
       });
     return () => {
       cancelled = true;
@@ -134,10 +142,17 @@ export default function ListDetailScreen() {
     if (!id || !draft.trim()) return;
     setSubmitting(true);
     try {
-      await addItem({ listId: id, text: draft.trim() });
-      setDraft('');
+      // There are no realtime subscriptions yet, so the screen won't
+      // refetch on its own — merge the created item into local state so
+      // it shows immediately instead of only after a remount.
+      const created = await addItem({ listId: id, text: draft.trim() });
+      setItems((prev) => [...prev, created]);
+      setDraft("");
     } catch (err) {
-      toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+      toast.show({
+        kind: "error",
+        message: err instanceof ApiError ? err.message : "Failed",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -147,9 +162,15 @@ export default function ListDetailScreen() {
     async (itemId: string) => {
       if (!id) return;
       try {
-        await toggleItem(id, itemId);
+        const updated = await toggleItem(id, itemId);
+        setItems((prev) =>
+          prev.map((i) => (i.id === updated.id ? updated : i)),
+        );
       } catch (err) {
-        toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+        toast.show({
+          kind: "error",
+          message: err instanceof ApiError ? err.message : "Failed",
+        });
       }
     },
     [id, toast],
@@ -160,15 +181,23 @@ export default function ListDetailScreen() {
       if (!id) return;
       try {
         await deleteItem(id, itemId);
+        setItems((prev) => prev.filter((i) => i.id !== itemId));
       } catch (err) {
-        toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
+        toast.show({
+          kind: "error",
+          message: err instanceof ApiError ? err.message : "Failed",
+        });
       }
     },
     [id, toast],
   );
 
   if (!list) {
-    return <Screen><Text>Loading…</Text></Screen>;
+    return (
+      <Screen>
+        <Text>Loading…</Text>
+      </Screen>
+    );
   }
 
   // Group items into "to do" and "done" sections. Order within each
@@ -181,7 +210,7 @@ export default function ListDetailScreen() {
   const total = items.length;
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} keyboardAvoid edges={["top"]}>
       <YStack flex={1}>
         <XStack
           alignItems="center"
@@ -197,7 +226,7 @@ export default function ListDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <ArrowLeft size={22} weight="regular" color="$textPrimary" />
+              <ArrowLeftIcon size={22} weight="regular" color="$textPrimary" />
             </View>
           </Pressable>
           <Text variant="label.sm" color="$textTertiary">
@@ -259,7 +288,11 @@ export default function ListDetailScreen() {
                     marginBottom="$2"
                     paddingHorizontal="$2"
                   >
-                    <View flex={1} height={1} backgroundColor="$borderDefault" />
+                    <View
+                      flex={1}
+                      height={1}
+                      backgroundColor="$borderDefault"
+                    />
                     <Text
                       variant="label.sm"
                       color="$textTertiary"
@@ -268,7 +301,11 @@ export default function ListDetailScreen() {
                     >
                       Done · {doneItems.length}
                     </Text>
-                    <View flex={1} height={1} backgroundColor="$borderDefault" />
+                    <View
+                      flex={1}
+                      height={1}
+                      backgroundColor="$borderDefault"
+                    />
                   </XStack>
                 </FadeIn>
               ) : null}
@@ -311,13 +348,13 @@ export default function ListDetailScreen() {
               width={48}
               height={48}
               borderRadius="$full"
-              backgroundColor={draft.trim() ? '$accent' : '$bgMuted'}
+              backgroundColor={draft.trim() ? "$accent" : "$bgMuted"}
               alignItems="center"
               justifyContent="center"
             >
               <Icon
-                icon={Plus}
-                tone={draft.trim() ? 'accentText' : 'textTertiary'}
+                icon={PlusIcon}
+                tone={draft.trim() ? "accentText" : "textTertiary"}
                 size={20}
                 weight="bold"
               />

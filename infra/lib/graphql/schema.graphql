@@ -64,6 +64,9 @@ type Invite {
   status: InviteStatus!
   createdAt: String!
   expiresAt: String!
+  # Populated by `pendingInvites` so the client can name the group an
+  # invite is for. Nullable: `inviteToGroup` returns an invite without it.
+  group: Group
 }
 
 type List {
@@ -116,9 +119,23 @@ input AddItemInput {
   text: String!
 }
 
+type InviteLink {
+  groupId: ID!
+  token: String!
+  createdBy: ID!
+  createdAt: String!
+  expiresAt: String!
+}
+
 type Mutation {
   createGroup(input: CreateGroupInput!): Group!
+  deleteGroup(groupId: ID!): Boolean!
   inviteToGroup(groupId: ID!, email: String!): Invite!
+  createGroupInviteLink(groupId: ID!): InviteLink!
+  joinGroupViaLink(groupId: ID!, token: String!): Group!
+  setMemberRole(groupId: ID!, userId: ID!, role: Role!): GroupMembership!
+  removeMember(groupId: ID!, userId: ID!): Boolean!
+  leaveGroup(groupId: ID!): Boolean!
   createList(input: CreateListInput!): List!
   deleteList(listId: ID!): Boolean!
   addItem(input: AddItemInput!): ListItem!
