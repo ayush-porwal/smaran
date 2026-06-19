@@ -94,10 +94,7 @@ export type OAuthCallbackConfig = {
 
 export const OAUTH_CALLBACKS_BY_ENV: Record<EnvCodes, OAuthCallbackConfig> = {
   [EnvCodes.LOCAL]: {
-    callbackUrls: [
-      "smaran://callback",
-      "http://localhost:8081/auth/callback",
-    ],
+    callbackUrls: ["smaran://callback", "http://localhost:8081/auth/callback"],
     signOutUrls: ["smaran://signout", "http://localhost:8081/auth/signout"],
   },
   [EnvCodes.SANDBOX]: {
@@ -115,18 +112,17 @@ export const OAUTH_CALLBACKS_BY_ENV: Record<EnvCodes, OAuthCallbackConfig> = {
 };
 
 /**
- * Secrets Manager secret name that holds the Google OAuth client
- * credentials. The same secret exists in every env (its value
- * differs per env). The Google Cloud Console project also has
- * different OAuth clients per env (different redirect URIs).
+ * Secrets Manager secret name holding the Google OAuth client
+ * credentials, namespaced per env (`smaran/{env}/google-oauth`). Each
+ * env's account holds its own secret because the Google Cloud Console
+ * OAuth client differs per env (different redirect URIs).
  *
  * Secret payload (JSON):
  *   { "clientId": "...", "clientSecret": "..." }
- *
- * For local dev, the value can be supplied via
- * `SMARAN_GOOGLE_OAUTH_SECRET` env var as the same JSON string.
  */
-export const GOOGLE_OAUTH_SECRET_NAME = "smaran/google-oauth";
+export function googleOAuthSecretName(envCode: EnvCodes): string {
+  return `smaran/${envCode}/google-oauth`;
+}
 
 /**
  * Custom domain for the prod API. The `smaran.ayushporwal.com`

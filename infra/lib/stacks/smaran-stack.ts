@@ -22,7 +22,7 @@ import { AppSyncConstruct } from "../constructs/appsync";
 import { CognitoConstruct } from "../constructs/cognito";
 import { DnsConstruct } from "../constructs/dns";
 import { DynamoDbConstruct } from "../constructs/dynamodb";
-import { EnvCodes, GOOGLE_OAUTH_SECRET_NAME, Regions } from "../constants";
+import { EnvCodes, googleOAuthSecretName, Regions } from "../constants";
 
 export interface SmaranStackProps extends cdk.StackProps {
   envCode: EnvCodes;
@@ -48,13 +48,13 @@ export class SmaranStack extends cdk.Stack {
     // --- Cognito (Phase 3) ---
     // Google OAuth credentials come from Secrets Manager, not CDK
     // context. Sandbox/staging/prod reference the manually-created
-    // `smaran/google-oauth` secret in their own account; LOCAL
+    // `smaran/{env}/google-oauth` secret in their own account; LOCAL
     // creates a placeholder secret in LocalStack so the user pool
     // has something to bind to without requiring a manual step.
     const isLocal = props.envCode === EnvCodes.LOCAL;
     const googleOAuthSecret: secretsmanager.ISecret = isLocal
       ? new secretsmanager.Secret(this, "GoogleOAuthSecret", {
-          secretName: GOOGLE_OAUTH_SECRET_NAME,
+          secretName: googleOAuthSecretName(props.envCode),
           secretStringValue: cdk.SecretValue.unsafePlainText(
             JSON.stringify({
               clientId: "local-placeholder-client-id",
@@ -65,7 +65,7 @@ export class SmaranStack extends cdk.Stack {
       : secretsmanager.Secret.fromSecretNameV2(
           this,
           "GoogleOAuthSecret",
-          GOOGLE_OAUTH_SECRET_NAME,
+          googleOAuthSecretName(props.envCode),
         );
 
     this.cognito = new CognitoConstruct(this, "Cognito", {
@@ -159,7 +159,8 @@ export class SmaranStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, "GraphQLEndpoint", {
       value: this.appsync.api.graphqlUrl,
-      description: "AppSync GraphQL endpoint URL (REQUIRES id token in Authorization header)",
+      description:
+        "AppSync GraphQL endpoint URL (REQUIRES id token in Authorization header)",
       exportName: `${props.resourcePrefix}-graphql-endpoint`,
     });
   }
