@@ -116,11 +116,11 @@ export default function GroupDetailScreen() {
     );
   }
 
-  // The creator is always an admin. We fall back to `createdBy` rather
-  // than relying solely on `group.role`, which can be missing/stale
-  // (e.g. against an older backend) — otherwise the admin-only controls
-  // would silently disappear for the very person who owns the group.
-  const isAdmin = group.role === "admin" || (!!user && group.createdBy === user.id);
+  // Trust the role the backend returns. (We deliberately do NOT fall back
+  // to `createdBy === user.id`: a creator who's been demoted by another
+  // admin correctly comes back as `member`, and showing them admin-only
+  // controls would just make every admin mutation fail server-side.)
+  const isAdmin = group.role === "admin";
 
   return (
     <Screen>

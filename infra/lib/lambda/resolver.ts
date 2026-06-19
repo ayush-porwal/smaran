@@ -89,8 +89,21 @@ async function listMemberships(groupId: string): Promise<any[]> {
 
 // How many admins a group has. The core invariant everywhere below is
 // that this never drops to zero, so a group is never left unmanageable.
+// Counted server-side (Select: COUNT) so we don't pull every membership
+// row over the wire just to count admins. `role` is a DynamoDB reserved
+// word, hence the name placeholder.
 async function adminCount(groupId: string): Promise<number> {
-  return (await listMemberships(groupId)).filter((m) => m.role === 'admin').length;
+  const r = await ddb.send(
+    new QueryCommand({
+      TableName: MEMBERSHIPS_TABLE,
+      KeyConditionExpression: 'groupId = :g',
+      FilterExpression: '#r = :r',
+      ExpressionAttributeNames: { '#r': 'role' },
+      ExpressionAttributeValues: { ':g': groupId, ':r': 'admin' },
+      Select: 'COUNT',
+    }),
+  );
+  return r.Count || 0;
 }
 
 async function countItems(
@@ -146,26 +159,28 @@ async function deleteGroupCascade(groupId: string): Promise<void> {
       ExpressionAttributeValues: { ':g': groupId },
     }),
   );
-  for (const l of lists.Items || []) {
-    const items = await ddb.send(
-      new QueryCommand({
-        TableName: ITEMS_TABLE,
-        KeyConditionExpression: 'listId = :l',
-        ExpressionAttributeValues: { ':l': l.listId },
-      }),
-    );
-    await Promise.all(
-      (items.Items || []).map((it: any) =>
-        ddb.send(
-          new DeleteCommand({
-            TableName: ITEMS_TABLE,
-            Key: { listId: it.listId, itemId: it.itemId },
-          }),
+  await Promise.all(
+    (lists.Items || []).map(async (l: any) => {
+      const items = await ddb.send(
+        new QueryCommand({
+          TableName: ITEMS_TABLE,
+          KeyConditionExpression: 'listId = :l',
+          ExpressionAttributeValues: { ':l': l.listId },
+        }),
+      );
+      await Promise.all(
+        (items.Items || []).map((it: any) =>
+          ddb.send(
+            new DeleteCommand({
+              TableName: ITEMS_TABLE,
+              Key: { listId: it.listId, itemId: it.itemId },
+            }),
+          ),
         ),
-      ),
-    );
-    await ddb.send(new DeleteCommand({ TableName: LISTS_TABLE, Key: { listId: l.listId } }));
-  }
+      );
+      await ddb.send(new DeleteCommand({ TableName: LISTS_TABLE, Key: { listId: l.listId } }));
+    }),
+  );
   await Promise.all(
     (await listMemberships(groupId)).map((m) =>
       ddb.send(
@@ -381,18 +396,23 @@ const ops: Record<string, Op> = {
     );
     // Attach the group so the client can name what it's an invite to.
     // (No per-field resolver on `Invite.group`; AppSync reads it off the
-    // object we return here.)
-    const out: any[] = [];
-    for (const inv of pending) {
-      const g = await ddb.send(
-        new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId: inv.groupId } }),
-      );
-      if (!g.Item) continue; // group deleted out from under the invite
-      // Skip invites the user has effectively already acted on.
-      if (await isMember(inv.groupId, userId(identity))) continue;
-      out.push({ ...mapInvite(inv), group: mapGroup(g.Item) });
-    }
-    return out.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    // object we return here.) Resolve all invites concurrently rather
+    // than one round-trip at a time.
+    const uid = userId(identity);
+    const resolved = await Promise.all(
+      pending.map(async (inv: any) => {
+        const [g, member] = await Promise.all([
+          ddb.send(new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId: inv.groupId } })),
+          isMember(inv.groupId, uid),
+        ]);
+        if (!g.Item) return null; // group deleted out from under the invite
+        if (member) return null; // already acted on
+        return { ...mapInvite(inv), group: mapGroup(g.Item) };
+      }),
+    );
+    return resolved
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   },
   createGroup: async (args, identity) => {
     const sub = userId(identity);
