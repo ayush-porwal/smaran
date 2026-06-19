@@ -81,7 +81,7 @@ jobs:
 
       # Hop 1 (OIDC): the infra account holds the only GitHub OIDC trust.
       - name: Configure AWS credentials (infra)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::126606499529:role/ap-github-actions-cdk
           aws-region: eu-central-1
@@ -90,11 +90,14 @@ jobs:
       # (the infra role can only assume `cdk-*` roles; the stack lives in
       # the target account, not the infra account).
       - name: Assume target lookup role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ steps.resolve.outputs.account }}:role/cdk-hnb659fds-lookup-role-${{ steps.resolve.outputs.account }}-eu-central-1
           aws-region: eu-central-1
           role-chaining: true
+          # The CDK lookup role's trust policy grants sts:AssumeRole but not
+          # sts:TagSession, so disable the action's default session tagging.
+          role-skip-session-tagging: true
 
       - name: Write mobile config from stack outputs
         working-directory: mobile
