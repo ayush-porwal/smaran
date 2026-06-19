@@ -139,14 +139,21 @@ jobs:
               echo "pr_number="
               echo "stack_prefix="
             else
-              # workflow_run from ci. PR runs have a non-empty
-              # pull_requests array; push-to-main runs are empty.
-              NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")
-              if [ -n "$NUMBER" ]; then
+              # Use workflow_run.event as the source of truth — not
+              # pull_requests[0].number. GitHub populates the
+              # pull_requests array on push-to-main events with the
+              # most recent open PR, which is unrelated to the merge
+              # that triggered this workflow_run. `event` is
+              # "pull_request" | "push" | "workflow_dispatch".
+              TRIGGER_EVENT=$(jq -r '.workflow_run.event // ""' "$GITHUB_EVENT_PATH")
+              if [ "$TRIGGER_EVENT" = "pull_request" ]; then
+                NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")
                 echo "is_pr_run=true"
                 echo "pr_number=$NUMBER"
                 echo "stack_prefix=pr${NUMBER}-"
               else
+                # push (merge to main) or any other event → shared
+                # sandbox + staging + prod chain.
                 echo "is_pr_run=false"
                 echo "pr_number="
                 echo "stack_prefix="
