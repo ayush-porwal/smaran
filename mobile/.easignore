@@ -1,0 +1,50 @@
+# Mirrors mobile/.gitignore for EAS uploads — EAS uses .easignore INSTEAD
+# of .gitignore. The one intentional difference: the per-env config files
+# (config/{env}.json) are NOT ignored here, so EAS uploads them to the
+# build server. app.config.ts reads config/{SMARAN_ENV}.json when EAS runs
+# `expo config`, so that file must be present in the upload.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+
+# NOTE: config/{env}.json is deliberately omitted here (unlike .gitignore)
+# so the CI-generated config is included in the EAS Build upload.
