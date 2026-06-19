@@ -50,11 +50,11 @@ workflows in [`ayush-porwal/actions`](https://github.com/ayush-porwal/actions):
 | `deploy-sandbox.yaml`    | PR opened/synchronised/reopened        | sandbox  |
 | `destroy-sandbox.yaml`   | PR closed (merged or not)              | sandbox  |
 | `deploy.yaml`            | push to `main` (staging → prod)        | staging, production |
-| `build-sandbox-apk.yaml` | `workflow_dispatch` (PR number input)  | sandbox  |
+| `build-apk.yaml`         | `workflow_dispatch` (env + PR number)  | sandbox / staging / production |
 
 The deploy workflows are backend-only. Mobile config (Cognito/AppSync
 wiring) is fetched live from the deployed stack's CloudFormation outputs
-by `mobile/scripts/pull-config.mjs` — at build time in `build-sandbox-apk`,
+by `mobile/scripts/pull-config.mjs` — at build time in `build-apk`,
 and on demand locally via `npm run config:pull` (in `mobile/`). There are
 no longer any smaran-local composite actions under `.github/actions/`.
 

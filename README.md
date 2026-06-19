@@ -63,7 +63,7 @@ delegate to reusable workflows in
 - **PR** → checks (`ci`) + an ephemeral `pr{N}` sandbox (`deploy-sandbox`)
 - **PR close** → sandbox teardown (`destroy-sandbox`)
 - **merge to `main`** → staging → production (`deploy`)
-- **on demand** → sandbox Android APK (`build-sandbox-apk`, `workflow_dispatch`)
+- **on demand** → Android APK for any env (`build-apk`, `workflow_dispatch`)
 
 ## Docs
 

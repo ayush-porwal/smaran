@@ -1,0 +1,125 @@
+name: build-apk
+
+# On-demand Android APK for any environment's deployed backend, so it
+# can be sideloaded onto a phone. Manual (workflow_dispatch) rather than
+# per-deploy to stay within EAS free-tier build limits.
+#
+# Self-contained: the config job fetches the live stack outputs itself
+# (the deploy workflows don't write mobile config), writes
+# mobile/config/{env}.json, and hands it to the EAS build via an
+# artifact. The matching eas.json profile sets SMARAN_ENV.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which deployed backend to build against."
+        required: true
+        type: choice
+        options: [sandbox, staging, production]
+      pr_number:
+        description: "PR number — required for sandbox only (e.g. 4 for pr4-smaran-sandbox)."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: build-apk-${{ inputs.environment }}-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  config:
+    name: fetch ${{ inputs.environment }} config
+    runs-on: ubuntu-latest
+    outputs:
+      profile: ${{ steps.resolve.outputs.profile }}
+    steps:
+      # Map the chosen env → account, stack name, EAS profile, SMARAN_ENV.
+      - name: Resolve env settings
+        id: resolve
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -e
+          case "$ENVIRONMENT" in
+            sandbox)
+              [ -n "$PR_NUMBER" ] || { echo "pr_number is required for sandbox" >&2; exit 1; }
+              account=219602461448
+              stack="pr${PR_NUMBER}-smaran-sandbox-eu-central-1"
+              profile=sandbox
+              smaran_env=sandbox ;;
+            staging)
+              account=139316820779
+              stack=smaran-staging-eu-central-1
+              profile=staging
+              smaran_env=staging ;;
+            production)
+              account=916657620124
+              stack=smaran-production-eu-central-1
+              profile=production
+              smaran_env=prod ;;
+            *) echo "unknown environment: $ENVIRONMENT" >&2; exit 1 ;;
+          esac
+          {
+            echo "account=$account"
+            echo "stack=$stack"
+            echo "profile=$profile"
+            echo "smaran_env=$smaran_env"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+
+      # Hop 1 (OIDC): the infra account holds the only GitHub OIDC trust.
+      - name: Configure AWS credentials (infra)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+          aws-region: eu-central-1
+
+      # Hop 2: chain-assume the target account's read-only CDK lookup role
+      # (the infra role can only assume `cdk-*` roles; the stack lives in
+      # the target account, not the infra account).
+      - name: Assume target lookup role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.resolve.outputs.account }}:role/cdk-hnb659fds-lookup-role-${{ steps.resolve.outputs.account }}-eu-central-1
+          aws-region: eu-central-1
+          role-chaining: true
+
+      - name: Write mobile config from stack outputs
+        working-directory: mobile
+        env:
+          STACK: ${{ steps.resolve.outputs.stack }}
+          SMARAN_ENV: ${{ steps.resolve.outputs.smaran_env }}
+        run: |
+          node scripts/pull-config.mjs --stack "$STACK" --env "$SMARAN_ENV" --out "${SMARAN_ENV}.json"
+
+      - name: Upload mobile config
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-config-${{ inputs.environment }}
+          path: mobile/config/${{ steps.resolve.outputs.smaran_env }}.json
+          if-no-files-found: error
+          retention-days: 7
+
+  build_android:
+    needs: config
+    uses: ayush-porwal/actions/.github/workflows/eas-build.yaml@main
+    with:
+      working-directory: mobile
+      node-version: "24.x"
+      platform: android
+      profile: ${{ needs.config.outputs.profile }}
+      config-artifact: mobile-config-${{ inputs.environment }}
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

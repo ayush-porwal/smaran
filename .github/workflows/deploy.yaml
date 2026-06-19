@@ -1,7 +1,7 @@
 name: deploy
 
 # Push-to-main pipeline: build → staging → prod (the reference chain).
-# Backend only — mobile APKs are built on demand via build-sandbox-apk.yaml
+# Backend only — mobile APKs are built on demand via build-apk.yaml
 # (and can be extended to staging/prod), fetching stack outputs directly.
 #
 # Staging and production deploys are gated by GitHub environment
