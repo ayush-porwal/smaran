@@ -41,22 +41,22 @@ npm test                 # jest unit tests
 
 ## CI/CD
 
-Hand-rolled GitHub Actions under `.github/workflows/`:
+Thin caller workflows under `.github/workflows/` delegate to reusable
+workflows in [`ayush-porwal/actions`](https://github.com/ayush-porwal/actions):
 
-| File                    | Trigger                                 | Env      |
-| ----------------------- | --------------------------------------- | -------- |
-| `ci.yaml`               | PR open / push to PR                    | n/a (no AWS) |
-| `deploy-sandbox.yaml`   | PR opened/synchronised/reopened         | sandbox  |
-| `destroy-sandbox.yaml`  | PR closed (not merged)                  | sandbox  |
-| `deploy-staging.yaml`   | push to `main`                          | staging  |
-| `deploy-prod.yaml`      | `workflow_dispatch` only (manual gate)  | prod     |
+| File                     | Trigger                                | Env      |
+| ------------------------ | -------------------------------------- | -------- |
+| `ci.yaml`                | PR open / synchronise                  | n/a (no AWS) |
+| `deploy-sandbox.yaml`    | PR opened/synchronised/reopened        | sandbox  |
+| `destroy-sandbox.yaml`   | PR closed (merged or not)              | sandbox  |
+| `deploy.yaml`            | push to `main` (staging → prod)        | staging, production |
+| `build-sandbox-apk.yaml` | `workflow_dispatch` (PR number input)  | sandbox  |
 
-Two reusable composite actions under `.github/actions/`:
-
-| Action                    | What it does                                            |
-| ------------------------- | ------------------------------------------------------- |
-| `assume-deployer`          | One-hop OIDC assume into `ap-github-actions-cdk`.       |
-| `write-mobile-config`     | Reads `cdk-outputs.json` and writes `mobile/config/*`. |
+The deploy workflows are backend-only. Mobile config (Cognito/AppSync
+wiring) is fetched live from the deployed stack's CloudFormation outputs
+by `mobile/scripts/pull-config.mjs` — at build time in `build-sandbox-apk`,
+and on demand locally via `npm run config:pull` (in `mobile/`). There are
+no longer any smaran-local composite actions under `.github/actions/`.
 
 ### One-time OIDC + bootstrap setup
 
@@ -82,4 +82,4 @@ The CDK code does not create IAM roles — the trust boundary lives in AWS, set 
 
 ## Secrets + OAuth
 
-Cognito Google sign-in needs an OAuth 2.0 client per env. Full setup in [`infra/docs/google-oauth-setup.md`](docs/google-oauth-setup.md). The client ID + secret are stored in AWS Secrets Manager (`smaran/google-oauth`, one secret per env account) and CDK reads them at deploy time via a CloudFormation dynamic reference — they never enter the template, so they're not in `cdk diff` output.
+Cognito Google sign-in needs an OAuth 2.0 client per env. Full setup in [`infra/docs/google-oauth-setup.md`](docs/google-oauth-setup.md). The client ID + secret are stored in AWS Secrets Manager (`smaran/{env}/google-oauth`, one secret per env account) and CDK reads them at deploy time via a CloudFormation dynamic reference — they never enter the template, so they're not in `cdk diff` output.

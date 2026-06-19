@@ -24,7 +24,7 @@ export interface CognitoConstructProps {
   envCode: EnvCodes;
   resourcePrefix: string;
   /**
-   * The `smaran/google-oauth` Secrets Manager entry holding the
+   * The `smaran/{env}/google-oauth` Secrets Manager entry holding the
    * Google OAuth 2.0 client credentials for this env. The secret
    * value is a JSON object: `{ "clientId": "...", "clientSecret": "..." }`.
    *
@@ -82,7 +82,9 @@ export class CognitoConstruct extends Construct {
       // Keep the pool around on stack delete in prod, wipe in
       // sandbox/staging.
       removalPolicy:
-        retention === "retain" ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+        retention === "retain"
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY,
       // Auto-delete on destroy only when retention is DESTROY.
       // Cognito user pools don't support autoDeleteObjects (that's
       // an S3 thing), so the removal policy is the only knob.
@@ -114,7 +116,9 @@ export class CognitoConstruct extends Construct {
     // contains `{{resolve:secretsmanager:...}}`, never plaintext.
     const google = new cognito.UserPoolIdentityProviderGoogle(this, "Google", {
       userPool: this.userPool,
-      clientId: googleOAuthSecret.secretValueFromJson("clientId").unsafeUnwrap(),
+      clientId: googleOAuthSecret
+        .secretValueFromJson("clientId")
+        .unsafeUnwrap(),
       clientSecretValue: googleOAuthSecret.secretValueFromJson("clientSecret"),
       scopes: ["openid", "email", "profile"],
       attributeMapping: {
@@ -170,7 +174,9 @@ export class CognitoConstruct extends Construct {
       accessTokenValidity: cdk.Duration.hours(1),
       refreshTokenValidity: cdk.Duration.days(30),
       enableTokenRevocation: true,
-      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.GOOGLE],
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
     });
 
     // Make the Google IdP a dependency of the client so the order
