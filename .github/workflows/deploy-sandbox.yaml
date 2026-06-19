@@ -3,6 +3,9 @@ name: deploy-sandbox
 # Per-PR sandbox: diff + deploy `pr{N}-smaran-sandbox-eu-central-1` on
 # each push to an open PR. Teardown is in destroy-sandbox.yaml (on
 # close). The actual PR checks run in parallel via ci.yaml.
+#
+# Backend only. A sandbox APK is built on demand via build-sandbox-apk.yaml,
+# which fetches these stack outputs itself.
 
 on:
   pull_request:
@@ -36,29 +39,5 @@ jobs:
       stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
       stack_prefix: pr${{ github.event.pull_request.number }}-
       environment: sandbox
-      outputs-artifact: sandbox-cdk-outputs
       working-directory: infra
       node-version: "24.x"
-
-  write_mobile_config:
-    needs: deploy_sandbox
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download outputs
-        uses: actions/download-artifact@v7
-        with:
-          name: sandbox-cdk-outputs
-          path: infra
-
-      - name: Write mobile config
-        uses: ./.github/actions/write-mobile-config
-        with:
-          outputs_file: infra/cdk-outputs.json
-          stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
-          env_code: pr
-          output_filename: pr-${{ github.event.pull_request.number }}.json

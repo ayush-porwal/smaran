@@ -1,8 +1,8 @@
 name: deploy
 
-# Push-to-main pipeline: build → staging → prod (the reference chain),
-# plus two smaran additions — mobile-config writing after each deploy
-# and an EAS Android APK build after prod.
+# Push-to-main pipeline: build → staging → prod (the reference chain).
+# Backend only — mobile APKs are built on demand via build-sandbox-apk.yaml
+# (and can be extended to staging/prod), fetching stack outputs directly.
 #
 # Staging and production deploys are gated by GitHub environment
 # required reviewers. The diff jobs are ungated so a reviewer reads the
@@ -42,30 +42,8 @@ jobs:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-staging-eu-central-1
       environment: staging
-      outputs-artifact: staging-cdk-outputs
       working-directory: infra
       node-version: "24.x"
-
-  write_mobile_config_staging:
-    needs: deploy_staging
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Download outputs
-        uses: actions/download-artifact@v7
-        with:
-          name: staging-cdk-outputs
-          path: infra
-      - name: Write mobile config
-        uses: ./.github/actions/write-mobile-config
-        with:
-          outputs_file: infra/cdk-outputs.json
-          stack_name: smaran-staging-eu-central-1
-          env_code: staging
-          output_filename: staging.json
 
   # --- prod (after staging deploys) ---------------------------------
   diff_prod:
@@ -84,51 +62,5 @@ jobs:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-production-eu-central-1
       environment: production
-      outputs-artifact: prod-cdk-outputs
       working-directory: infra
       node-version: "24.x"
-
-  write_mobile_config_prod:
-    needs: deploy_prod
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Download outputs
-        uses: actions/download-artifact@v7
-        with:
-          name: prod-cdk-outputs
-          path: infra
-      - name: Write mobile config
-        uses: ./.github/actions/write-mobile-config
-        with:
-          outputs_file: infra/cdk-outputs.json
-          stack_name: smaran-production-eu-central-1
-          env_code: prod
-          output_filename: prod.json
-      # Hand the freshly written prod config to the EAS build job — it
-      # runs on a clean runner and the file is gitignored.
-      - name: Upload prod mobile config
-        uses: actions/upload-artifact@v7
-        with:
-          name: mobile-config-prod
-          path: mobile/config/prod.json
-          if-no-files-found: error
-          retention-days: 7
-
-  # --- mobile APK (prod config baked in) ----------------------------
-  build_android:
-    needs: write_mobile_config_prod
-    uses: ayush-porwal/actions/.github/workflows/eas-build.yaml@main
-    with:
-      working-directory: mobile
-      node-version: "24.x"
-      platform: android
-      profile: production
-      smaran_env: prod
-      config-artifact: mobile-config-prod
-      artifact-name: smaran-android-apk
-    secrets:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -1,5 +1,32 @@
 {
   "build": {
+    "local": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "SMARAN_ENV": "local"
+      }
+    },
+    "sandbox": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "SMARAN_ENV": "sandbox"
+      }
+    },
+    "staging": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "SMARAN_ENV": "staging"
+      }
+    },
     "production": {
       "android": {
         "buildType": "apk"

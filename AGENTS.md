@@ -23,8 +23,10 @@ Monorepo with two independent npm projects:
   both public — keep them that way, or reusable-workflow resolution
   fails at startup (0s run, "workflow file issue").
 - Never commit secrets to the `actions` repo; it's public and generic.
-- `.github/actions/write-mobile-config/` is smaran-local glue (stays
-  here, not extracted to the actions repo).
+- Deploy workflows are backend-only. Mobile config (Cognito/AppSync
+  wiring) is fetched live from stack outputs by `mobile/scripts/pull-config.mjs`
+  — at build time in `build-sandbox-apk.yaml`, and locally via
+  `npm run config:pull`. There are no smaran-local composite actions.
 
 ## AWS / deploys
 

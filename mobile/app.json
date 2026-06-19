@@ -2,6 +2,7 @@
   "expo": {
     "name": "Smaran",
     "slug": "smaran",
+    "owner": "porwalayush",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -42,6 +43,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4aa39737-2a98-4126-af41-3a801ca951f8"
+      }
     }
   }
 }

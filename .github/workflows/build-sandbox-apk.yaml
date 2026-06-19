@@ -1,0 +1,85 @@
+name: build-sandbox-apk
+
+# On-demand Android APK for a PR's sandbox backend, so it can be
+# sideloaded onto a phone. Manual (workflow_dispatch) rather than
+# per-push to stay within EAS free-tier build limits.
+#
+# Self-contained: the config job fetches the live stack outputs itself
+# (the deploy workflows no longer write mobile config), writes
+# mobile/config/sandbox.json, and hands it to the EAS build via an
+# artifact. The `sandbox` eas.json profile sets SMARAN_ENV=sandbox.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number whose sandbox to build (e.g. 4 for pr4-smaran-sandbox)."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: build-sandbox-apk-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  config:
+    name: fetch sandbox config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+
+      # Hop 1 (OIDC): the infra account holds the only GitHub OIDC trust.
+      - name: Configure AWS credentials (infra)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+          aws-region: eu-central-1
+
+      # Hop 2: chain-assume the sandbox account's read-only CDK lookup
+      # role (the infra role can only assume `cdk-*` roles; the stack
+      # lives in the sandbox account, not the infra account).
+      - name: Assume sandbox lookup role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::219602461448:role/cdk-hnb659fds-lookup-role-219602461448-eu-central-1
+          aws-region: eu-central-1
+          role-chaining: true
+
+      - name: Write mobile config from stack outputs
+        working-directory: mobile
+        run: |
+          node scripts/pull-config.mjs \
+            --stack pr${{ inputs.pr_number }}-smaran-sandbox-eu-central-1 \
+            --env sandbox \
+            --out sandbox.json
+
+      - name: Upload sandbox config
+        uses: actions/upload-artifact@v7
+        with:
+          name: sandbox-mobile-config
+          path: mobile/config/sandbox.json
+          if-no-files-found: error
+          retention-days: 7
+
+  build_android:
+    needs: config
+    uses: ayush-porwal/actions/.github/workflows/eas-build.yaml@main
+    with:
+      working-directory: mobile
+      node-version: "24.x"
+      platform: android
+      profile: sandbox
+      config-artifact: sandbox-mobile-config
+      artifact-name: smaran-sandbox-apk
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
