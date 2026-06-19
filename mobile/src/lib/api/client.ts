@@ -1,5 +1,5 @@
 // The single import path for the data layer. Feature code imports from
-// `@/lib/api` (or `@/lib/api/client`) and never from `./mock` directly.
-// Today this re-exports the mock implementation; tomorrow it re-exports
-// the GraphQL implementation. Either way, call sites stay the same.
-export * from './mock';
+// `@/lib/api` and never reaches into a specific implementation.
+// Kept as a separate file so the implementation behind it can be
+// swapped (e.g. for testing) without touching call sites.
+export * from './graphql';

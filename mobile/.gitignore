@@ -41,3 +41,11 @@ example
 # generated native folders
 /ios
 /android
+
+# Configs written by the deploy workflow (CI only). The
+# `local.json` file is committed.
+config/sandbox.json
+config/staging.json
+config/prod.json
+config/pr-*.json
+

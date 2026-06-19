@@ -145,24 +145,26 @@ export default function ListDetailScreen() {
 
   const onToggle = useCallback(
     async (itemId: string) => {
+      if (!id) return;
       try {
-        await toggleItem(itemId);
+        await toggleItem(id, itemId);
       } catch (err) {
         toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
       }
     },
-    [toast],
+    [id, toast],
   );
 
   const onDelete = useCallback(
     async (itemId: string) => {
+      if (!id) return;
       try {
-        await deleteItem(itemId);
+        await deleteItem(id, itemId);
       } catch (err) {
         toast.show({ kind: 'error', message: err instanceof ApiError ? err.message : 'Failed' });
       }
     },
-    [toast],
+    [id, toast],
   );
 
   if (!list) {

@@ -33,14 +33,10 @@ export function CreateListModal({
     }
     setSubmitting(true);
     try {
-      // Pull the group to honor its color. The mock layer doesn't enforce
-      // this; we just pass through whatever the user picked.
-      const group = await getGroup(groupId).catch(() => null);
       const list = await createList({
         groupId,
         name: name.trim(),
         emoji,
-        ...(group ? {} : {}),
       });
       toast.show({ kind: 'success', message: `Created ${list.name}` });
       setName('');

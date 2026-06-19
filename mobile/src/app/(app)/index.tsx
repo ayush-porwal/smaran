@@ -36,6 +36,12 @@ export default function GroupsHomeScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    // Reset the error before each refetch so a previous failure
+    // doesn't linger while we load. The React 19 lint rule against
+    // synchronous setState in an effect is overly strict here — the
+    // alternative (resetting error only in the `onRetry` handler)
+    // leaves stale errors on version-bump refetches.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     listMyGroups()
       .then((g) => {

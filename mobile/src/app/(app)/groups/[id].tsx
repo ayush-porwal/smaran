@@ -51,6 +51,9 @@ export default function GroupDetailScreen() {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
+    // Reset the error before each refetch (same rationale as
+    // `(app)/index.tsx`).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     Promise.all([getGroup(id), listsInGroup(id), listGroupMembers(id)])
       .then(([g, l, m]) => {
