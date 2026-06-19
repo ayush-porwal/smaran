@@ -4,7 +4,7 @@ name: deploy-sandbox
 # each push to an open PR. Teardown is in destroy-sandbox.yaml (on
 # close). The actual PR checks run in parallel via ci.yaml.
 #
-# Backend only. A sandbox APK is built on demand via build-sandbox-apk.yaml,
+# Backend only. A sandbox APK is built on demand via build-apk.yaml,
 # which fetches these stack outputs itself.
 
 on:

@@ -2,9 +2,9 @@
 // Materialises mobile/config/{out}.json from a deployed CDK stack's
 // CloudFormation outputs. Used in two places:
 //
-//   - CI (build-sandbox-apk workflow): writes config/sandbox.json before
-//     the EAS build, so the backend wiring is fetched live rather than
-//     persisted by the deploy chain.
+//   - CI (build-apk workflow): writes config/{env}.json before the EAS
+//     build, so the backend wiring is fetched live rather than persisted
+//     by the deploy chain.
 //   - Local dev: point local.json at a deployed sandbox so `expo start`
 //     talks to a real backend (Google sign-in, AppSync). The per-PR
 //     sandbox is ephemeral, so re-run this whenever it redeploys.
