@@ -97,6 +97,9 @@ export class DynamoDbConstruct extends Construct {
       tableName: `${resourcePrefix}-invites`,
       partitionKey: { name: "groupId", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "inviteId", type: dynamodb.AttributeType.STRING },
+      // Expired invites auto-delete; the resolver writes `ttl` as
+      // epoch seconds alongside the ISO `expiresAt`.
+      timeToLiveAttribute: "ttl",
     });
     this.invitesTable.addGlobalSecondaryIndex({
       indexName: "ByEmail",

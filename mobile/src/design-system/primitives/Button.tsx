@@ -12,26 +12,33 @@
 //   - `disabled`: same
 //
 // Heights match our TextField (48) so form actions line up.
-import { useTheme } from 'tamagui';
-import { View } from 'tamagui';
-import type { ReactNode } from 'react';
+import { useTheme, View } from "tamagui";
+import { type ReactNode } from "react";
 
-import { Pressable } from './Pressable';
-import { Text } from './Text';
+import { Pressable } from "./Pressable";
+import { Text } from "./Text";
 
-export type ButtonVariant = 'filled' | 'ghost' | 'danger';
-export type ButtonTone = 'onAccent' | 'onDanger' | 'textPrimary' | 'textSecondary';
+function isTextLabel(child: ReactNode): child is string | number {
+  return typeof child === "string" || typeof child === "number";
+}
+
+export type ButtonVariant = "filled" | "ghost" | "danger";
+export type ButtonTone =
+  | "onAccent"
+  | "onDanger"
+  | "textPrimary"
+  | "textSecondary";
 
 const ON_COLOR: Record<string, string> = {
-  onAccent: '#FFFFFF',
-  onDanger: '#FFFFFF',
+  onAccent: "#FFFFFF",
+  onDanger: "#FFFFFF",
 };
 
 const TONE_TO_PROP_COLOR: Record<ButtonTone, string> = {
-  onAccent: '#FFFFFF',
-  onDanger: '#FFFFFF',
-  textPrimary: '$textPrimary',
-  textSecondary: '$textSecondary',
+  onAccent: "#FFFFFF",
+  onDanger: "#FFFFFF",
+  textPrimary: "$textPrimary",
+  textSecondary: "$textSecondary",
 };
 
 export type ButtonProps = {
@@ -42,7 +49,7 @@ export type ButtonProps = {
   variant?: ButtonVariant;
   // Override the text color (foreground). When omitted, picked from variant.
   tone?: ButtonTone;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   // Forwards extra styles to the outer Pressable. Use sparingly —
   // margin alignment is the main reason callers reach for this.
@@ -54,9 +61,9 @@ export function Button({
   onPress,
   disabled = false,
   loading = false,
-  variant = 'filled',
+  variant = "filled",
   tone,
-  size = 'md',
+  size = "md",
   fullWidth = false,
   style,
 }: ButtonProps) {
@@ -64,24 +71,27 @@ export function Button({
   const isInert = disabled || loading;
 
   const bg = (() => {
-    if (variant === 'filled') return (theme.accent as { val?: string }).val ?? '$accent';
-    if (variant === 'danger') return (theme.danger as { val?: string }).val ?? '$danger';
-    return 'transparent'; // ghost
+    if (variant === "filled")
+      return (theme.accent as { val?: string }).val ?? "$accent";
+    if (variant === "danger")
+      return (theme.danger as { val?: string }).val ?? "$danger";
+    return "transparent"; // ghost
   })();
 
   const bgPressed = (() => {
-    if (variant === 'filled')
-      return (theme.accentPressed as { val?: string }).val ?? '$accentPressed';
-    if (variant === 'danger') return (theme.danger as { val?: string }).val ?? '$danger';
-    return '$bgSubtle';
+    if (variant === "filled")
+      return (theme.accentPressed as { val?: string }).val ?? "$accentPressed";
+    if (variant === "danger")
+      return (theme.danger as { val?: string }).val ?? "$danger";
+    return "$bgSubtle";
   })();
 
-  const fg = tone ?? (variant === 'danger' ? 'onDanger' : 'onAccent');
+  const fg = tone ?? (variant === "danger" ? "onDanger" : "onAccent");
   const fgHex = ON_COLOR[fg] ?? null;
   const fgToken = TONE_TO_PROP_COLOR[fg];
 
   const heights = { sm: 36, md: 48, lg: 56 } as const;
-  const fontSize = size === 'sm' ? '$3' : size === 'lg' ? '$6' : '$5';
+  const fontSize = size === "sm" ? "$3" : size === "lg" ? "$6" : "$5";
 
   return (
     <Pressable
@@ -89,10 +99,11 @@ export function Button({
       disabled={isInert}
       accessibilityRole="button"
       accessibilityState={{ disabled: isInert, busy: loading }}
-      style={[style, { width: fullWidth ? '100%' : undefined }]}
+      style={[style, { width: fullWidth ? "100%" : undefined }]}
     >
       {({ pressed }) => (
         <View
+          width={fullWidth ? "100%" : undefined}
           height={heights[size]}
           paddingHorizontal="$5"
           borderRadius="$md"
@@ -101,15 +112,26 @@ export function Button({
           justifyContent="center"
           opacity={isInert ? 0.5 : 1}
         >
-          <Text
-            // Use hex for the "on-*" tones (constant white), token for others.
-            color={fgHex ?? fgToken}
-            fontSize={fontSize}
-            fontWeight="600"
-            numberOfLines={1}
-          >
-            {children}
-          </Text>
+          {isTextLabel(children) ? (
+            <Text
+              // Use hex for the "on-*" tones (constant white), token for others.
+              color={fgHex ?? fgToken}
+              fontSize={fontSize}
+              fontWeight="600"
+              textAlign="center"
+              // Without flexShrink:0 a single-line label centered in a
+              // width-less container collapses to zero width on Android
+              // (renders but is invisible). Keep it from shrinking.
+              flexShrink={0}
+            >
+              {children}
+            </Text>
+          ) : (
+            // Custom content (e.g. icon + label). Must NOT be wrapped in
+            // <Text> — RN Text cannot contain Views and many Android
+            // builds render that as a blank button.
+            children
+          )}
         </View>
       )}
     </Pressable>

@@ -1,7 +1,7 @@
 {
-  "envCode": "local",
-  "userPoolId": "",
-  "userPoolClientId": "",
-  "hostedUiDomain": "",
-  "graphqlEndpoint": ""
+  "envCode": "staging",
+  "userPoolId": "eu-central-1_KpeHieNqZ",
+  "userPoolClientId": "3n2d9l5v97a12e5pceumr1r54p",
+  "hostedUiDomain": "smaran-staging.auth.eu-central-1.amazoncognito.com",
+  "graphqlEndpoint": "https://gaireiboijekdcs2bvkteux2d4.appsync-api.eu-central-1.amazonaws.com/graphql"
 }

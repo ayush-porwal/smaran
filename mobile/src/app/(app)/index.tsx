@@ -23,6 +23,7 @@ import { listMyGroups, type GroupWithMeta, ApiError } from '@/lib/api';
 import { useStoreVersion } from '@/lib/api/useStoreVersion';
 import { useCurrentUser } from '@/lib/api/useCurrentUser';
 import { CreateGroupModal } from '@/components/CreateGroupModal';
+import { PendingInvites } from '@/components/PendingInvites';
 
 export default function GroupsHomeScreen() {
   const router = useRouter();
@@ -33,6 +34,9 @@ export default function GroupsHomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const groupVersion = useStoreVersion('group:any'); // bumped on any group mutation
+  // Bumped locally when an invite is accepted so the groups list refetches
+  // (the user just became a member of a group it doesn't yet show).
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +60,7 @@ export default function GroupsHomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [sessionVersion, groupVersion]);
+  }, [sessionVersion, groupVersion, reloadKey]);
 
   return (
     <Screen>
@@ -81,6 +85,8 @@ export default function GroupsHomeScreen() {
             </Pressable>
           </YStack>
         </YStack>
+
+        <PendingInvites onAccepted={() => setReloadKey((k) => k + 1)} />
 
         {error ? (
           <ErrorState
