@@ -1,82 +1,53 @@
-// Icon: thin wrapper around Phosphor icons that resolves a theme tone
-// to a real hex color at render time. Phosphor (and the underlying
-// react-native-svg) doesn't understand Tamagui's `$token` color
-// strings, so a raw `<Plus color="$textTertiary" />` would render
-// nothing. This primitive does the theme lookup for you.
+// Resolves theme tokens to hex — Phosphor/react-native-svg ignore Tamagui `$token` strings.
 //
-// Tones are the design-system theme keys (see `tokens/colors.ts`).
-// Pass them as the `tone` prop; we read the active theme via
-// `useTheme()` and hand a hex string to Phosphor.
-//
-// The "Inverse" tone is special-cased to a static `#FFFFFF` because
-// it lives only in the theme and not in `tokens.color` (the babel
-// plugin only sees the static map). The few places that need text on
-// the accent background can just pass `tone="accentText"` instead,
-// which IS in the static map.
-import { useTheme } from 'tamagui';
-import type { ComponentType } from 'react';
+// Use onAccent/onDanger on colored fills; accentText is for links beside surfaces.
+import { useTheme } from "tamagui";
+import type { ComponentType } from "react";
 
-// The icon component types from `phosphor-react-native`. We only need
-// the props that vary at the call site; everything else is forwarded.
 type PhosphorIcon = ComponentType<{
   size?: number;
-  weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+  weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
   color?: string;
 }>;
 
 export type IconTone =
-  | 'textPrimary'
-  | 'textSecondary'
-  | 'textTertiary'
-  | 'accent'
-  | 'accentText'
-  | 'danger'
-  | 'success'
-  | 'warning'
-  // Foreground tones for icons that sit ON a colored background (an
-  // accent or danger button, a pill, etc). These are intentionally
-  // theme-independent because the background color is also theme-
-  // independent — white-on-indigo should look the same in both modes.
-  | 'onAccent'
-  | 'onDanger';
+  | "textPrimary"
+  | "textSecondary"
+  | "textTertiary"
+  | "accent"
+  | "accentText"
+  | "danger"
+  | "success"
+  | "warning"
+  | "info"
+  | "onAccent"
+  | "onDanger";
 
 export type IconProps = {
   icon: PhosphorIcon;
   tone?: IconTone;
   size?: number;
-  weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+  weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
   color?: string;
 };
 
-const ON_COLOR_TONES: Record<string, string> = {
-  onAccent: '#FFFFFF',
-  onDanger: '#FFFFFF',
-};
-
-// `useTheme()` returns a map from token name to a `{ val, isVar, ... }`
-// object. For hex strings the `.val` is what we want to hand to SVG.
 function useIconColor(tone: IconTone, override?: string): string {
-  // Rules of Hooks: hooks must be called in the same order every
-  // render. Call `useTheme()` unconditionally up front, even when
-  // we'll return early — the order matters, not whether we use the
-  // result.
   const t = useTheme();
   if (override) return override;
-  if (ON_COLOR_TONES[tone]) return ON_COLOR_TONES[tone];
-  // `t[tone]` is a token entry; `.val` is the resolved hex string.
   const entry = t[tone] as { val?: string } | string | undefined;
-  if (typeof entry === 'string') return entry;
+  if (typeof entry === "string") return entry;
   if (entry?.val) return entry.val;
-  // Fall back to the static `themes` map for the current scheme.
-  // The scheme resolution happens at the call site (`useResolvedScheme`).
-  return '#000000';
+  const fallback = t.textPrimary as { val?: string } | string | undefined;
+  if (typeof fallback === "string") return fallback;
+  if (fallback?.val) return fallback.val;
+  return "#0A0A0A";
 }
 
 export function Icon({
   icon: IconComponent,
-  tone = 'textPrimary',
+  tone = "textPrimary",
   size = 20,
-  weight = 'regular',
+  weight = "regular",
   color,
 }: IconProps) {
   const resolved = useIconColor(tone, color);

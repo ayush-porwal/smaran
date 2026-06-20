@@ -1,7 +1,3 @@
-// Group detail. Shows the group's metadata, the list of members with
-// avatars, and the lists inside the group. Tapping a list navigates
-// to the list detail. The header has a back button and a "+" button
-// for creating a new list.
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -57,14 +53,12 @@ export default function GroupDetailScreen() {
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
-  // Bumped after a role change / removal so the group + member list refetch.
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    // Reset the error before each refetch (same rationale as
-    // `(app)/index.tsx`).
+    // Clear stale error on version-bump refetch; see (app)/index.tsx.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     Promise.all([getGroup(id), listsInGroup(id), listGroupMembers(id)])
@@ -116,10 +110,7 @@ export default function GroupDetailScreen() {
     );
   }
 
-  // Trust the role the backend returns. (We deliberately do NOT fall back
-  // to `createdBy === user.id`: a creator who's been demoted by another
-  // admin correctly comes back as `member`, and showing them admin-only
-  // controls would just make every admin mutation fail server-side.)
+  // Use backend role only — demoted creators must not see admin controls.
   const isAdmin = group.role === "admin";
 
   return (
@@ -134,7 +125,12 @@ export default function GroupDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <ArrowLeftIcon size={22} weight="regular" color="$textPrimary" />
+              <Icon
+                icon={ArrowLeftIcon}
+                tone="textPrimary"
+                size={22}
+                weight="regular"
+              />
             </View>
           </Pressable>
           <View width={40} height={40} />
@@ -162,7 +158,6 @@ export default function GroupDetailScreen() {
             </YStack>
           </View>
 
-          {/* Tap to view the roster and (for admins) manage roles. */}
           <Pressable
             onPress={() => setMembersOpen(true)}
             accessibilityLabel="View members"
@@ -185,17 +180,29 @@ export default function GroupDetailScreen() {
                   {group.memberCount === 1 ? "member" : "members"} in this group
                 </Text>
               </YStack>
-              <CaretRightIcon size={18} weight="bold" color="$textTertiary" />
+              <Icon
+                icon={CaretRightIcon}
+                tone="textTertiary"
+                size={18}
+                weight="bold"
+              />
             </Stack.Horizontal>
           </Pressable>
 
-          {/* Prominent, labelled invite entry point. Admin-only — the
-              backend authorises invites on the admin role. */}
           {isAdmin ? (
             <Button fullWidth onPress={() => setInviteOpen(true)}>
-              <Stack.Horizontal alignItems="center" justifyContent="center" gap="$2">
-                <Icon icon={UserPlusIcon} tone="accentText" size={18} weight="bold" />
-                <Text color="#FFFFFF" fontWeight="600" fontSize="$5">
+              <Stack.Horizontal
+                alignItems="center"
+                justifyContent="center"
+                gap="$2"
+              >
+                <Icon
+                  icon={UserPlusIcon}
+                  tone="onAccent"
+                  size={18}
+                  weight="bold"
+                />
+                <Text color="$onAccent" fontWeight="600" fontSize="$5">
                   Invite people
                 </Text>
               </Stack.Horizontal>
@@ -205,7 +212,14 @@ export default function GroupDetailScreen() {
 
         {lists.length === 0 ? (
           <EmptyState
-            icon={<PlusIcon size={32} weight="regular" />}
+            icon={
+              <Icon
+                icon={PlusIcon}
+                tone="textTertiary"
+                size={32}
+                weight="regular"
+              />
+            }
             title="No lists yet"
             description="Make your first list in this group."
             actionLabel="New list"
@@ -244,16 +258,12 @@ export default function GroupDetailScreen() {
         )}
       </YStack>
 
-      {/* Floating action button — sits above the bottom safe area on
-          top of the list scroll. The empty state already has its own
-          "New list" CTA, so we hide the FAB when there's nothing to
-          add a list to. */}
       {lists.length > 0 ? (
         <View
           position="absolute"
           right="$5"
           bottom="$5"
-          shadowColor="$shadowColor"
+          shadowColor="#000"
           shadowOffset={{ width: 0, height: 4 }}
           shadowOpacity={0.18}
           shadowRadius={10}
@@ -271,7 +281,7 @@ export default function GroupDetailScreen() {
               alignItems="center"
               justifyContent="center"
             >
-              <Icon icon={PlusIcon} tone="accentText" size={24} weight="bold" />
+              <Icon icon={PlusIcon} tone="onAccent" size={24} weight="bold" />
             </View>
           </Pressable>
         </View>
@@ -307,8 +317,7 @@ export default function GroupDetailScreen() {
         isAdmin={isAdmin}
         onMembersChanged={() => setReloadKey((k) => k + 1)}
         onLeftGroup={() => {
-          // The group is gone from this user's list (left or deleted);
-          // invalidate the home groups list, then go back to it.
+          // Home groups list won't refetch otherwise after leave/delete.
           bumpVersion("group:any");
           router.back();
         }}

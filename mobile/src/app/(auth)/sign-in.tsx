@@ -1,11 +1,7 @@
-// Sign-in screen. The only flow is "Continue with Google" — the
-// app opens the Cognito hosted UI in the browser, the user signs
-// in with Google, and the deep-link callback exchanges the code
-// for tokens.
-import { useState } from 'react';
-import { XStack, YStack } from 'tamagui';
-import { GoogleLogo } from 'phosphor-react-native';
-import { useRouter } from 'expo-router';
+import { useState } from "react";
+import { XStack, YStack } from "tamagui";
+import { GoogleLogoIcon } from "phosphor-react-native";
+import { useRouter } from "expo-router";
 
 import {
   Box,
@@ -15,11 +11,11 @@ import {
   Screen,
   Text,
   useToast,
-} from '@/design-system';
-import { signIn as cognitoSignIn } from '@/lib/auth';
-import { ApiError } from '@/lib/api';
-import { isConfigured } from '@/lib/config';
-import { takePendingInvite } from '@/lib/pendingInvite';
+} from "@/design-system";
+import { signIn as cognitoSignIn } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
+import { isConfigured } from "@/lib/config";
+import { takePendingInvite } from "@/lib/pendingInvite";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -30,8 +26,9 @@ export default function SignInScreen() {
   async function onSignIn() {
     if (!ready) {
       toast.show({
-        kind: 'error',
-        message: 'App is not configured for this build. Run the deploy workflow first.',
+        kind: "error",
+        message:
+          "App is not configured for this build. Run the deploy workflow first.",
       });
       return;
     }
@@ -43,15 +40,15 @@ export default function SignInScreen() {
       const pending = await takePendingInvite();
       if (pending) {
         router.replace({
-          pathname: '/join',
+          pathname: "/join",
           params: { g: pending.groupId, t: pending.token },
         } as never);
       } else {
-        router.replace('/(app)' as never);
+        router.replace("/(app)" as never);
       }
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Sign in failed';
-      toast.show({ kind: 'error', message });
+      const message = err instanceof ApiError ? err.message : "Sign in failed";
+      toast.show({ kind: "error", message });
     } finally {
       setSubmitting(false);
     }
@@ -87,9 +84,14 @@ export default function SignInScreen() {
             disabled={!ready}
           >
             <XStack alignItems="center" gap="$2">
-              <Icon icon={GoogleLogo} tone="accentText" size={20} weight="regular" />
-              <Text variant="label.md" color="$accentText" fontWeight="600">
-                {submitting ? 'Opening Google…' : 'Continue with Google'}
+              <Icon
+                icon={GoogleLogoIcon}
+                tone="onAccent"
+                size={20}
+                weight="bold"
+              />
+              <Text color="$onAccent" fontWeight="600" fontSize="$5">
+                {submitting ? "Opening Google…" : "Continue with Google"}
               </Text>
             </XStack>
           </Button>

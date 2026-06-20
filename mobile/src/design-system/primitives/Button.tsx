@@ -1,17 +1,5 @@
-// Button: full replacement for Tamagui's `Button` that we control
-// end-to-end. Tamagui's Button has subtle `color` prop behavior that
-// doesn't always reach the inner text in dev (we hit a case where the
-// label was invisible on the modal's primary action).
-//
-// The public API mirrors the parts of Tamagui's Button we use:
-//   - `variant`: filled | ghost | danger
-//   - `tone`: textPrimary | textSecondary | onAccent | onDanger
-//             (the foreground text color; defaults to onAccent for
-//             filled/danger, textPrimary for ghost)
-//   - `loading`: shows a dimmed state
-//   - `disabled`: same
-//
-// Heights match our TextField (48) so form actions line up.
+// Custom Button — Tamagui's `color` prop doesn't reliably reach inner text
+// (e.g. invisible labels on modal primary actions).
 import { useTheme, View } from "tamagui";
 import { type ReactNode } from "react";
 
@@ -29,14 +17,9 @@ export type ButtonTone =
   | "textPrimary"
   | "textSecondary";
 
-const ON_COLOR: Record<string, string> = {
-  onAccent: "#FFFFFF",
-  onDanger: "#FFFFFF",
-};
-
 const TONE_TO_PROP_COLOR: Record<ButtonTone, string> = {
-  onAccent: "#FFFFFF",
-  onDanger: "#FFFFFF",
+  onAccent: "$onAccent",
+  onDanger: "$onDanger",
   textPrimary: "$textPrimary",
   textSecondary: "$textSecondary",
 };
@@ -47,12 +30,9 @@ export type ButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   variant?: ButtonVariant;
-  // Override the text color (foreground). When omitted, picked from variant.
   tone?: ButtonTone;
   size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
-  // Forwards extra styles to the outer Pressable. Use sparingly —
-  // margin alignment is the main reason callers reach for this.
   style?: object;
 };
 
@@ -86,8 +66,13 @@ export function Button({
     return "$bgSubtle";
   })();
 
-  const fg = tone ?? (variant === "danger" ? "onDanger" : "onAccent");
-  const fgHex = ON_COLOR[fg] ?? null;
+  const fg =
+    tone ??
+    (variant === "ghost"
+      ? "textPrimary"
+      : variant === "danger"
+        ? "onDanger"
+        : "onAccent");
   const fgToken = TONE_TO_PROP_COLOR[fg];
 
   const heights = { sm: 36, md: 48, lg: 56 } as const;
@@ -114,22 +99,17 @@ export function Button({
         >
           {isTextLabel(children) ? (
             <Text
-              // Use hex for the "on-*" tones (constant white), token for others.
-              color={fgHex ?? fgToken}
+              color={fgToken}
               fontSize={fontSize}
               fontWeight="600"
               textAlign="center"
-              // Without flexShrink:0 a single-line label centered in a
-              // width-less container collapses to zero width on Android
-              // (renders but is invisible). Keep it from shrinking.
+              // Without flexShrink:0 the label collapses to zero width on Android.
               flexShrink={0}
             >
               {children}
             </Text>
           ) : (
-            // Custom content (e.g. icon + label). Must NOT be wrapped in
-            // <Text> — RN Text cannot contain Views and many Android
-            // builds render that as a blank button.
+            // Custom content must not be wrapped in <Text> — RN Text can't contain Views.
             children
           )}
         </View>

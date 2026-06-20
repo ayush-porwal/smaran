@@ -1,32 +1,32 @@
-// Hides the parent tab navigator's bar while this screen is focused.
-// The detail screens (group detail, list detail) are Stack screens
-// pushed on top of the (app) Tabs; without this hook the tab bar
-// stays visible underneath, leaving an empty strip between the
-// composer and the system bottom inset.
+// Group/list detail screens set `tabBarStyle` on their own options —
+// not the parent Tabs navigator — to hide the tab bar while focused.
 import { useFocusEffect, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 
-type TabBarStyle = { display?: 'none' | 'flex' };
+type TabBarStyle = {
+  display?: 'none' | 'flex';
+  height?: number;
+  opacity?: number;
+};
 
 export function useHideTabBar() {
   const navigation = useNavigation();
   useFocusEffect(
     useCallback(() => {
-      // Walk up to the parent tab navigator and toggle its tab bar
-      // style. `getParent()` is on the runtime object even if it's
-      // not in the TS types here.
-      const parent = (navigation as unknown as { getParent?: () => unknown }).getParent?.();
-      if (!parent) return;
-      const typed = parent as {
+      const nav = navigation as unknown as {
         setOptions: (o: object) => void;
         getOptions?: () => { tabBarStyle?: TabBarStyle };
       };
-      const original: TabBarStyle = typed.getOptions?.().tabBarStyle ?? {};
-      typed.setOptions({
-        tabBarStyle: { ...original, display: 'none' },
-      });
+      const original: TabBarStyle = nav.getOptions?.().tabBarStyle ?? {};
+      const hidden: TabBarStyle = {
+        ...original,
+        display: 'none',
+        height: 0,
+        opacity: 0,
+      };
+      nav.setOptions({ tabBarStyle: hidden });
       return () => {
-        typed.setOptions({ tabBarStyle: original });
+        nav.setOptions({ tabBarStyle: original });
       };
     }, [navigation])
   );

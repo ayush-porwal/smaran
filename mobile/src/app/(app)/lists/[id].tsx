@@ -1,7 +1,3 @@
-// List detail. Renders items in a FlashList-backed List. Tapping the
-// leading checkbox toggles the item via `toggleItem`; the row animates
-// the strike-through and dim transition from the `Checkable` motion
-// pattern. The composer at the bottom adds items via `addItem`.
 import { useCallback, useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from "phosphor-react-native";
@@ -74,7 +70,7 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
             justifyContent="center"
           >
             {item.checked ? (
-              <Text fontSize={14} fontWeight="700" color="#FFFFFF">
+              <Text fontSize={14} fontWeight="700" color="$onAccent">
                 ✓
               </Text>
             ) : null}
@@ -210,7 +206,7 @@ export default function ListDetailScreen() {
   const total = items.length;
 
   return (
-    <Screen padded={false} keyboardAvoid edges={["top"]}>
+    <Screen padded={false} keyboardAvoid>
       <YStack flex={1}>
         <XStack
           alignItems="center"
@@ -226,7 +222,12 @@ export default function ListDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <ArrowLeftIcon size={22} weight="regular" color="$textPrimary" />
+              <Icon
+                icon={ArrowLeftIcon}
+                tone="textPrimary"
+                size={22}
+                weight="regular"
+              />
             </View>
           </Pressable>
           <Text variant="label.sm" color="$textTertiary">
@@ -323,7 +324,6 @@ export default function ListDetailScreen() {
           )}
         </Stack.Vertical>
 
-        {/* Composer */}
         <XStack
           alignItems="center"
           gap="$2"
@@ -354,7 +354,7 @@ export default function ListDetailScreen() {
             >
               <Icon
                 icon={PlusIcon}
-                tone={draft.trim() ? "accentText" : "textTertiary"}
+                tone={draft.trim() ? "onAccent" : "textTertiary"}
                 size={20}
                 weight="bold"
               />

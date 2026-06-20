@@ -1,11 +1,11 @@
 // Tamagui v2 nests color/space/size/radius under `tokens` (v1 used top-level keys).
-import { createTamagui } from 'tamagui';
-import { config as defaultConfig } from '@tamagui/config';
+import { createTamagui } from "tamagui";
+import { config as defaultConfig } from "@tamagui/config";
 
-import { bodyFont, headingFont, textVariants } from './tokens/typography';
-import { space } from './tokens/spacing';
-import { radius } from './tokens/radii';
-import { indigo, neutral, semantic } from './tokens/colors';
+import { bodyFont, headingFont, textVariants } from "./tokens/typography";
+import { space } from "./tokens/spacing";
+import { radius } from "./tokens/radii";
+import { group, indigo, neutral, semantic } from "./tokens/colors";
 
 // Custom theme keys sit alongside Tamagui's required `background` and `color`.
 const lightTheme = {
@@ -24,6 +24,15 @@ const lightTheme = {
   textSecondary: neutral.textSecondary.light,
   textTertiary: neutral.textTertiary.light,
   textInverse: neutral.textInverse.light,
+  onAccent: neutral.onAccent.light,
+  onDanger: neutral.onDanger.light,
+
+  groupIndigo: group.indigo.light,
+  groupViolet: group.violet.light,
+  groupRose: group.rose.light,
+  groupAmber: group.amber.light,
+  groupEmerald: group.emerald.light,
+  groupSky: group.sky.light,
 
   accent: indigo[500].light,
   accentHover: indigo[400].light,
@@ -53,6 +62,15 @@ const darkTheme = {
   textSecondary: neutral.textSecondary.dark,
   textTertiary: neutral.textTertiary.dark,
   textInverse: neutral.textInverse.dark,
+  onAccent: neutral.onAccent.dark,
+  onDanger: neutral.onDanger.dark,
+
+  groupIndigo: group.indigo.dark,
+  groupViolet: group.violet.dark,
+  groupRose: group.rose.dark,
+  groupAmber: group.amber.dark,
+  groupEmerald: group.emerald.dark,
+  groupSky: group.sky.dark,
 
   accent: indigo[500].dark,
   accentHover: indigo[400].dark,
@@ -93,7 +111,7 @@ export const tamaguiConfig = createTamagui({
     md: { maxWidth: 768 },
     lg: { maxWidth: 1024 },
   },
-  defaultTheme: 'light',
+  defaultTheme: "light",
 });
 
 export default tamaguiConfig;

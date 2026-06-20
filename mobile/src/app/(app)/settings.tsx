@@ -1,8 +1,7 @@
-// Settings tab. Theme picker, account info, sign out.
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
-import { YStack, XStack, View } from 'tamagui';
-import { SignOut, UserCircle } from 'phosphor-react-native';
+import { useState } from "react";
+import { useRouter } from "expo-router";
+import { YStack, XStack, View } from "tamagui";
+import { SignOutIcon, UserCircleIcon } from "phosphor-react-native";
 
 import {
   Heading,
@@ -14,8 +13,8 @@ import {
   Text,
   useThemeControls,
   useToast,
-} from '@/design-system';
-import { signOut, useCurrentUser } from '@/lib/api';
+} from "@/design-system";
+import { signOut, useCurrentUser } from "@/lib/api";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -28,10 +27,13 @@ export default function SettingsScreen() {
     setConfirmOpen(false);
     try {
       await signOut();
-      toast.show({ kind: 'info', message: 'Signed out' });
-      router.replace({ pathname: '/(auth)/sign-in' } as never);
+      toast.show({ kind: "info", message: "Signed out" });
+      router.replace({ pathname: "/(auth)/sign-in" } as never);
     } catch (err) {
-      toast.show({ kind: 'error', message: err instanceof Error ? err.message : 'Failed' });
+      toast.show({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Failed",
+      });
     }
   }
 
@@ -61,12 +63,17 @@ export default function SettingsScreen() {
               alignItems="center"
               justifyContent="center"
             >
-              <Icon icon={UserCircle} tone="textSecondary" size={24} weight="regular" />
+              <Icon
+                icon={UserCircleIcon}
+                tone="textSecondary"
+                size={24}
+                weight="regular"
+              />
             </View>
             <YStack flex={1}>
-              <Text variant="heading.sm">{user?.name ?? 'Anonymous'}</Text>
+              <Text variant="heading.sm">{user?.name ?? "Anonymous"}</Text>
               <Text variant="body.sm" color="$textSecondary">
-                {user?.email ?? '—'}
+                {user?.email ?? "—"}
               </Text>
             </YStack>
             <Pressable
@@ -80,7 +87,12 @@ export default function SettingsScreen() {
                 alignItems="center"
                 justifyContent="center"
               >
-                <Icon icon={SignOut} tone="danger" size={20} weight="regular" />
+                <Icon
+                  icon={SignOutIcon}
+                  tone="danger"
+                  size={20}
+                  weight="regular"
+                />
               </View>
             </Pressable>
           </Stack.Horizontal>
@@ -97,7 +109,7 @@ export default function SettingsScreen() {
             borderRadius="$md"
             overflow="hidden"
           >
-            {(['light', 'dark', 'system'] as const).map((p, i) => (
+            {(["light", "dark", "system"] as const).map((p, i) => (
               <Pressable key={p} onPress={() => setPreference(p)}>
                 <XStack
                   alignItems="center"
@@ -126,8 +138,11 @@ export default function SettingsScreen() {
         onOpenChange={setConfirmOpen}
         title="Sign out?"
         description="You'll need to sign in again to access your groups and lists."
-        primaryAction={{ label: 'Sign out', onPress: onSignOut }}
-        secondaryAction={{ label: 'Cancel', onPress: () => setConfirmOpen(false) }}
+        primaryAction={{ label: "Sign out", onPress: onSignOut }}
+        secondaryAction={{
+          label: "Cancel",
+          onPress: () => setConfirmOpen(false),
+        }}
         destructive
       />
     </Screen>

@@ -1,19 +1,26 @@
-import { useState } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { useState } from "react";
+import { XStack, YStack } from "tamagui";
 
-import { Modal, Pressable, Stack, Text, TextField, useToast } from '@/design-system';
-import { ApiError, createGroup, type GroupColor } from '@/lib/api';
+import {
+  Modal,
+  Pressable,
+  Stack,
+  Text,
+  TextField,
+  useToast,
+} from "@/design-system";
+import { ApiError, createGroup, type GroupColor } from "@/lib/api";
 
-const COLORS: { value: GroupColor; bg: string }[] = [
-  { value: 'indigo', bg: '#5B5FE9' },
-  { value: 'violet', bg: '#7C3AED' },
-  { value: 'rose', bg: '#F43F5E' },
-  { value: 'amber', bg: '#F59E0B' },
-  { value: 'emerald', bg: '#10B981' },
-  { value: 'sky', bg: '#0EA5E9' },
+const COLORS: { value: GroupColor; bg: `$${string}` }[] = [
+  { value: "indigo", bg: "$groupIndigo" },
+  { value: "violet", bg: "$groupViolet" },
+  { value: "rose", bg: "$groupRose" },
+  { value: "amber", bg: "$groupAmber" },
+  { value: "emerald", bg: "$groupEmerald" },
+  { value: "sky", bg: "$groupSky" },
 ];
 
-const EMOJIS = ['🏠', '✈️', '🎤', '🍳', '📚', '🎮', '🏖️', '💼', '🎉', '🐶'];
+const EMOJIS = ["🏠", "✈️", "🎤", "🍳", "📚", "🎮", "🏖️", "💼", "🎉", "🐶"];
 
 type CreateGroupModalProps = {
   open: boolean;
@@ -21,29 +28,34 @@ type CreateGroupModalProps = {
   onCreated: (groupId: string) => void;
 };
 
-export function CreateGroupModal({ open, onOpenChange, onCreated }: CreateGroupModalProps) {
+export function CreateGroupModal({
+  open,
+  onOpenChange,
+  onCreated,
+}: CreateGroupModalProps) {
   const toast = useToast();
-  const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState('🏠');
-  const [color, setColor] = useState<GroupColor>('indigo');
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("🏠");
+  const [color, setColor] = useState<GroupColor>("indigo");
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit() {
     if (!name.trim()) {
-      toast.show({ kind: 'error', message: 'Group name is required' });
+      toast.show({ kind: "error", message: "Group name is required" });
       return;
     }
     setSubmitting(true);
     try {
       const group = await createGroup({ name: name.trim(), emoji, color });
-      toast.show({ kind: 'success', message: `Created ${group.name}` });
-      setName('');
-      setEmoji('🏠');
-      setColor('indigo');
+      toast.show({ kind: "success", message: `Created ${group.name}` });
+      setName("");
+      setEmoji("🏠");
+      setColor("indigo");
       onCreated(group.id);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Could not create group';
-      toast.show({ kind: 'error', message });
+      const message =
+        err instanceof ApiError ? err.message : "Could not create group";
+      toast.show({ kind: "error", message });
     } finally {
       setSubmitting(false);
     }
@@ -55,8 +67,12 @@ export function CreateGroupModal({ open, onOpenChange, onCreated }: CreateGroupM
       onOpenChange={onOpenChange}
       title="New group"
       description="Groups are shared with the people you invite."
-      primaryAction={{ label: submitting ? 'Creating…' : 'Create group', onPress: onSubmit, loading: submitting }}
-      secondaryAction={{ label: 'Cancel', onPress: () => onOpenChange(false) }}
+      primaryAction={{
+        label: submitting ? "Creating…" : "Create group",
+        onPress: onSubmit,
+        loading: submitting,
+      }}
+      secondaryAction={{ label: "Cancel", onPress: () => onOpenChange(false) }}
     >
       <YStack gap="$4">
         <TextField
@@ -79,8 +95,8 @@ export function CreateGroupModal({ open, onOpenChange, onCreated }: CreateGroupM
                   width={44}
                   height={44}
                   borderRadius="$md"
-                  backgroundColor={emoji === e ? '$accentSubtle' : '$bgSubtle'}
-                  borderColor={emoji === e ? '$accent' : 'transparent'}
+                  backgroundColor={emoji === e ? "$accentSubtle" : "$bgSubtle"}
+                  borderColor={emoji === e ? "$accent" : "transparent"}
                   borderWidth={1}
                   alignItems="center"
                   justifyContent="center"
@@ -103,14 +119,16 @@ export function CreateGroupModal({ open, onOpenChange, onCreated }: CreateGroupM
                   width={32}
                   height={32}
                   borderRadius="$full"
-                  backgroundColor={c.bg as `$${string}`}
-                  borderColor={color === c.value ? '$textPrimary' : 'transparent'}
+                  backgroundColor={c.bg}
+                  borderColor={
+                    color === c.value ? "$textPrimary" : "transparent"
+                  }
                   borderWidth={2}
                   alignItems="center"
                   justifyContent="center"
                 >
                   {color === c.value ? (
-                    <Text color="#FFFFFF" fontSize={14} fontWeight="700">
+                    <Text color="$onAccent" fontSize={14} fontWeight="700">
                       ✓
                     </Text>
                   ) : null}
