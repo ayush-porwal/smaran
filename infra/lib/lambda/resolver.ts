@@ -1,17 +1,6 @@
-// Lambda resolver for AppSync. Bundled and deployed via
-// `NodejsFunction` (esbuild via CDK). AWS SDK v3 — Node.js 20 Lambda
-// doesn't bundle v2 anymore, and bundling v2 ourselves would be larger
-// than just switching to v3's modular imports.
-//
-// AppSync invokes this same function for every operation; we
-// dispatch on `event.info.fieldName` to the right handler.
-//
-// Conventions:
-//   - The caller's user id is in `event.identity.sub` (Cognito).
-//   - DynamoDB client is constructed once at cold start.
-//   - The GraphQL schema uses `id` for every entity; DynamoDB stores
-//     them as `groupId`/`listId`/`itemId`/`inviteId`. We map at the
-//     boundary so the response shape matches the schema.
+// Single Lambda dispatches on `event.info.fieldName`. GraphQL `id`
+// fields map to DynamoDB `groupId`/`listId`/`itemId`/`inviteId` at
+// the response boundary.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DeleteCommand,
@@ -42,16 +31,11 @@ function err(code: string, msg: string): never {
 const userId = (identity: any) =>
   identity?.sub || identity?.username || err('unauthenticated', 'no identity');
 
-// The caller's verified email, from the Cognito id token claims AppSync
-// forwards on `event.identity.claims`. Invites are keyed by email (the
-// recipient may not have an account yet), so this is how a signed-in
-// user discovers and accepts the invites addressed to them.
+// Invites are keyed by email (recipient may not have an account yet).
 const callerEmail = (identity: any): string =>
   String(identity?.claims?.email || '').toLowerCase().trim();
 
-// Display name from the id token (falls back to email). Denormalised
-// onto the membership row at join time so `listGroupMembers` can show
-// who's in a group without a separate user directory.
+// Denormalised onto membership rows at join time — no separate user directory.
 const callerName = (identity: any): string =>
   String(identity?.claims?.name || identity?.claims?.email || '').trim();
 
@@ -87,11 +71,8 @@ async function listMemberships(groupId: string): Promise<any[]> {
   return r.Items || [];
 }
 
-// How many admins a group has. The core invariant everywhere below is
-// that this never drops to zero, so a group is never left unmanageable.
-// Counted server-side (Select: COUNT) so we don't pull every membership
-// row over the wire just to count admins. `role` is a DynamoDB reserved
-// word, hence the name placeholder.
+// Invariant: admin count never drops to zero. `role` is a DynamoDB
+// reserved word, hence the name placeholder.
 async function adminCount(groupId: string): Promise<number> {
   const r = await ddb.send(
     new QueryCommand({
@@ -146,10 +127,8 @@ async function touchList(listId: string): Promise<void> {
   );
 }
 
-// Tear a group down completely: every list and its items, every
-// membership, every invite, then the group row. Used by `deleteGroup`
-// and by the sole-member `leaveGroup` path (which would otherwise
-// orphan the group). Mirrors `deleteList`'s cascade, one level up.
+// Cascade delete: lists → items → memberships → invites → group.
+// Used by `deleteGroup` and sole-member `leaveGroup` (would orphan otherwise).
 async function deleteGroupCascade(groupId: string): Promise<void> {
   const lists = await ddb.send(
     new QueryCommand({
@@ -205,7 +184,6 @@ async function deleteGroupCascade(groupId: string): Promise<void> {
   await ddb.send(new DeleteCommand({ TableName: GROUPS_TABLE, Key: { groupId } }));
 }
 
-// --- Schema mappers (DDB row → GraphQL shape) ---
 function mapGroup(g: any) {
   return {
     id: g.groupId,
@@ -266,9 +244,8 @@ function mapMembership(m: any) {
     },
   };
 }
-// A shareable group invite link is just an Invites row with kind:'link'
-// (no email). The `token` is the row's inviteId. Anyone signed in who
-// presents a valid token joins — it is not bound to a specific address.
+// Shareable link invite: kind `'link'`, no email. Token = inviteId; not
+// bound to a specific address — anyone signed in with the link joins.
 function mapInviteLink(inv: any) {
   return {
     groupId: inv.groupId,
@@ -308,8 +285,7 @@ const ops: Record<string, Op> = {
       const g = await ddb.send(new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId: mem.groupId } }));
       if (!g.Item) continue;
       const memberCount = await countItems(MEMBERSHIPS_TABLE, 'groupId = :g', { ':g': mem.groupId });
-      // LISTS_TABLE.PK = listId; groupId is reachable only through
-      // the ByGroup GSI. Without IndexName, DynamoDB rejects the query.
+      // LISTS_TABLE PK = listId; groupId is only reachable via ByGroup GSI.
       const listCount = await countItems(LISTS_TABLE, 'groupId = :g', { ':g': mem.groupId }, 'ByGroup');
       out.push({ ...mapGroup(g.Item), role: mem.role, memberCount, listCount });
     }
@@ -379,8 +355,6 @@ const ops: Record<string, Op> = {
   pendingInvites: async (_a, identity) => {
     const email = callerEmail(identity);
     if (!email) return [];
-    // Invites carry the recipient's email; the ByEmail GSI is the only
-    // way to find "invites addressed to me" without scanning.
     const r = await ddb.send(
       new QueryCommand({
         TableName: INVITES_TABLE,
@@ -394,10 +368,6 @@ const ops: Record<string, Op> = {
       (inv: any) =>
         inv.status === 'pending' && new Date(inv.expiresAt).getTime() > now,
     );
-    // Attach the group so the client can name what it's an invite to.
-    // (No per-field resolver on `Invite.group`; AppSync reads it off the
-    // object we return here.) Resolve all invites concurrently rather
-    // than one round-trip at a time.
     const uid = userId(identity);
     const resolved = await Promise.all(
       pending.map(async (inv: any) => {
@@ -405,8 +375,8 @@ const ops: Record<string, Op> = {
           ddb.send(new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId: inv.groupId } })),
           isMember(inv.groupId, uid),
         ]);
-        if (!g.Item) return null; // group deleted out from under the invite
-        if (member) return null; // already acted on
+        if (!g.Item) return null;
+        if (member) return null;
         return { ...mapInvite(inv), group: mapGroup(g.Item) };
       }),
     );
@@ -440,7 +410,6 @@ const ops: Record<string, Op> = {
           userId: sub,
           role: 'admin',
           joinedAt: ts,
-          // Denormalised profile so the member list can render names.
           email: callerEmail(identity),
           name: callerName(identity),
         },
@@ -453,11 +422,7 @@ const ops: Record<string, Op> = {
     const groupId = String(args.groupId);
     const email = String(args.email || '').toLowerCase().trim();
     if (!email.includes('@')) err('validation', 'invalid email');
-    // Inviting is an admin-only action.
     await requireAdmin(groupId, sub);
-    // Don't pile up duplicate pending invites for the same person —
-    // re-inviting just returns the live invite. (Invites are keyed by
-    // groupId, so a single-partition query is cheap here.)
     const now = Date.now();
     const existing = await ddb.send(
       new QueryCommand({
@@ -484,9 +449,8 @@ const ops: Record<string, Op> = {
       status: 'pending',
       createdAt: ts,
       expiresAt: new Date(expiresMs).toISOString(),
-      // Numeric epoch-seconds copy of expiresAt for the table's DynamoDB
-      // TTL, which auto-deletes expired invites. Read paths still filter
-      // on `expiresAt` since TTL deletion can lag up to ~48h.
+      // Epoch-seconds for DynamoDB TTL. Read paths still filter on
+      // `expiresAt` — TTL deletion can lag up to ~48h.
       ttl: Math.floor(expiresMs / 1000),
     };
     await ddb.send(new PutCommand({ TableName: INVITES_TABLE, Item: invite }));
@@ -632,10 +596,8 @@ const ops: Record<string, Op> = {
     const email = callerEmail(identity);
     if (!email) err('unauthenticated', 'no email on identity');
     const inviteId = String(args.inviteId);
-    // The Invites table is keyed by (groupId, inviteId) and we only have
-    // the inviteId, so we locate it through the ByEmail GSI scoped to the
-    // caller. That doubles as authorisation: a user can only accept an
-    // invite addressed to their own email.
+    // Invites PK is (groupId, inviteId); locate via ByEmail GSI scoped to
+    // caller — doubles as authorisation (only your own email).
     const r = await ddb.send(
       new QueryCommand({
         TableName: INVITES_TABLE,
@@ -657,8 +619,7 @@ const ops: Record<string, Op> = {
     if (!g.Item) err('not_found', 'group no longer exists');
 
     const ts = nowIso();
-    // Add the membership unless one already exists (re-accepting a stale
-    // invite must not clobber an admin's role back down to member).
+    // Re-accepting must not clobber an existing admin role back to member.
     try {
       await ddb.send(
         new PutCommand({
@@ -668,7 +629,6 @@ const ops: Record<string, Op> = {
             userId: sub,
             role: 'member',
             joinedAt: ts,
-            // Denormalised profile so the member list can render names.
             email,
             name: callerName(identity),
           },
@@ -679,8 +639,7 @@ const ops: Record<string, Op> = {
       if (e?.name !== 'ConditionalCheckFailedException') throw e;
     }
 
-    // Mark the invite accepted so it stops showing up as pending.
-    // `status` is a DynamoDB reserved word, hence the name placeholder.
+    // `status` is a DynamoDB reserved word.
     await ddb.send(
       new UpdateCommand({
         TableName: INVITES_TABLE,
@@ -702,8 +661,7 @@ const ops: Record<string, Op> = {
     await requireAdmin(groupId, sub);
     const target = await getMembership(groupId, targetUserId);
     if (!target) err('not_found', 'that person is not a member of this group');
-    if (target.role === role) return mapMembership(target); // already there
-    // Never demote the last admin — a group must stay manageable.
+    if (target.role === role) return mapMembership(target);
     if (target.role === 'admin' && role === 'member' && (await adminCount(groupId)) <= 1)
       err('conflict', 'a group must have at least one admin');
     const updated = { ...target, role };
@@ -741,7 +699,6 @@ const ops: Record<string, Op> = {
         'promote another member to admin (or delete the group) before leaving',
       );
     if (isLastAdmin) {
-      // Sole member of the group — leaving would orphan it, so remove it.
       await deleteGroupCascade(groupId);
       return true;
     }
@@ -761,8 +718,6 @@ const ops: Record<string, Op> = {
     const groupId = String(args.groupId);
     await requireAdmin(groupId, sub);
     const now = Date.now();
-    // Reuse an existing, unexpired link so the admin keeps a stable URL
-    // instead of minting a new one on every open.
     const existing = await ddb.send(
       new QueryCommand({
         TableName: INVITES_TABLE,
@@ -797,7 +752,6 @@ const ops: Record<string, Op> = {
     const sub = userId(identity);
     const groupId = String(args.groupId);
     const token = String(args.token);
-    // Token-based, NOT email-bound: anyone signed in who has the link joins.
     const r = await ddb.send(
       new GetCommand({ TableName: INVITES_TABLE, Key: { groupId, inviteId: token } }),
     );
@@ -826,7 +780,6 @@ const ops: Record<string, Op> = {
       );
       await touchGroup(groupId);
     } catch (e: any) {
-      // Already a member — idempotent, just return the group.
       if (e?.name !== 'ConditionalCheckFailedException') throw e;
     }
     return mapGroup(g.Item);

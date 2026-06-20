@@ -1,5 +1,3 @@
-// Modal for creating a new list inside a group. Captures name and
-// emoji; list color tracks the group's color so the UI is consistent.
 import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 

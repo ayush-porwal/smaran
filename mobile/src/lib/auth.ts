@@ -1,16 +1,3 @@
-// Cognito hosted-UI authentication.
-//
-// Flow (OAuth 2.0 + PKCE):
-//   1. signIn() generates a PKCE code_verifier + code_challenge,
-//      builds the authorize URL, opens it in the system browser.
-//   2. User authenticates with Google via the Cognito hosted UI.
-//   3. Cognito redirects to `smaran://callback?code=...`.
-//   4. The deep-link handler in app/(auth)/callback.tsx exchanges
-//      the code for tokens (POST to /oauth2/token) and stores
-//      them in AsyncStorage.
-//
-// The tokens (id, access, refresh) live in AsyncStorage. The id
-// token is the bearer token used by the AppSync GraphQL client.
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,7 +16,6 @@ const STORAGE_KEY = 'smaran.auth.tokens.v1';
 const BROWSER_REDIRECT = makeRedirectUri({ scheme: 'smaran', path: 'callback' });
 const LOGOUT_REDIRECT = makeRedirectUri({ scheme: 'smaran', path: 'signout' });
 
-// --- PKCE helpers ---
 function stringToBytes(s: string): Uint8Array {
   const out = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
@@ -37,11 +23,7 @@ function stringToBytes(s: string): Uint8Array {
 }
 
 async function generatePkce(): Promise<{ verifier: string; challenge: string }> {
-  // 32 random bytes -> 43 char base64url. We use that as the
-  // verifier (no need to hash the random bytes — the verifier IS
-  // the secret). `expo-crypto` is the React-Native-safe random
-  // source; the browser `crypto.getRandomValues` global doesn't
-  // exist on iOS/Android.
+  // expo-crypto: browser crypto.getRandomValues is unavailable on RN.
   const random = await Crypto.getRandomBytesAsync(32);
   const verifier = bytesToBase64url(random);
   const challenge = bytesToBase64url(
@@ -55,12 +37,11 @@ async function generatePkce(): Promise<{ verifier: string; challenge: string }> 
   return { verifier, challenge };
 }
 
-// --- Storage ---
 type StoredTokens = {
   idToken: string;
   accessToken: string;
   refreshToken?: string;
-  expiresAt: number; // ms epoch
+  expiresAt: number;
   userId: string;
   email: string;
   name: string;
@@ -84,14 +65,6 @@ async function clearTokens(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
 }
 
-// --- Auth API ---
-
-/**
- * Open the Cognito hosted UI in the system browser. Returns a
- * promise that resolves when the user has authenticated and the
- * authorization code is exchanged for tokens. The promise rejects
- * on user-cancel or any error.
- */
 export async function signIn(): Promise<AuthSession> {
   if (!config.hostedUiDomain || !config.userPoolClientId) {
     throw new ApiError('network', 'App is not configured for this environment');
@@ -140,7 +113,6 @@ export async function signIn(): Promise<AuthSession> {
   return tokensToSession(tokens);
 }
 
-/** Exchange the auth code for tokens by POSTing to /oauth2/token. */
 async function exchangeCodeForTokens(
   code: string,
   verifier: string,
@@ -179,7 +151,6 @@ async function exchangeCodeForTokens(
   };
 }
 
-/** Clear tokens and revoke the refresh token. */
 export async function signOut(): Promise<void> {
   const tokens = await loadTokens();
   await clearTokens();
@@ -200,7 +171,6 @@ export async function signOut(): Promise<void> {
   }
 }
 
-/** Return the current user from the id token claims, or null. */
 export async function getCurrentUser(): Promise<User | null> {
   const tokens = await loadTokens();
   if (!tokens) return null;
@@ -226,7 +196,6 @@ export async function getCurrentUser(): Promise<User | null> {
   };
 }
 
-/** Returns the current valid id token, refreshing if necessary. */
 export async function getIdToken(): Promise<string | null> {
   const tokens = await loadTokens();
   if (!tokens) return null;

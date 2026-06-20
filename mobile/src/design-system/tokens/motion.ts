@@ -1,8 +1,3 @@
-// Reanimated 3 spring/timing presets. Spec section 8.
-// `withSpring` accepts `{ damping, stiffness, mass }`; `withTiming` takes
-// a duration in ms and an easing function. We export both shapes so
-// primitive motion components (FadeIn, Stagger, Checkable, etc.) can
-// spread them into Reanimated's helpers.
 export const springs = {
   standard: { damping: 20, stiffness: 200, mass: 1 },
   snappy: { damping: 18, stiffness: 320, mass: 0.8 },
@@ -18,8 +13,7 @@ export const timings = {
   long: 480,
 } as const;
 
-// CSS-style cubic-bezier curves. Reanimated's `Easing.bezier` accepts
-// a 4-tuple, so we keep the arrays in that shape.
+// 4-tuples for Reanimated's `Easing.bezier`.
 export const easings = {
   standard: [0.2, 0, 0, 1] as const,
   accelerate: [0.3, 0, 1, 1] as const,

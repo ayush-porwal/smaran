@@ -1,13 +1,3 @@
-// TextField: a single-line text input with our theme defaults baked in.
-// Wraps Tamagui's `Input` and standardizes height, padding, focus ring,
-// and error state. The "label" and "helper" slots are for accessibility
-// and visual structure; if you need help text, pass it in.
-//
-// The min height matches Apple's HIG recommendation (44pt) and
-// Material's touch target minimum. Larger than `$5` line-height alone
-// would produce, but still feels light because the padding is `$3`.
-//
-// Use this anywhere you'd otherwise reach for a raw `<Input>`.
 import { forwardRef } from 'react';
 import { Input, Label, YStack, View } from 'tamagui';
 import type { ComponentProps, ReactNode } from 'react';
@@ -20,13 +10,8 @@ type TextFieldProps = Omit<InputProps, 'size'> & {
   label?: string;
   helper?: string;
   error?: string;
-  // The id used by the visible <Label htmlFor=...> binding. Defaults
-  // to undefined, in which case no explicit `for` is set (Label wraps
-  // the input for implicit association).
   id?: string;
-  // When true, returns just the styled <Input> without a label or
-  // helper slot. Use for inline composers or other label-less inputs
-  // that still need our standard 48px height and focus ring.
+  // Input only — no label/helper slot (inline composers).
   bare?: boolean;
 };
 

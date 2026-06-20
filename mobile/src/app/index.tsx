@@ -1,5 +1,3 @@
-// Root index. Auth gate: check the session, redirect to (auth) if
-// missing, otherwise to (app).
 import { Redirect } from 'expo-router';
 
 import { useCurrentUser } from '@/lib/api/useCurrentUser';

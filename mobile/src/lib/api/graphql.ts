@@ -1,7 +1,3 @@
-// AppSync GraphQL data layer. Every request attaches the Cognito id
-// token as a bearer token in the Authorization header; AppSync
-// validates against the user pool configured in Phase 3 / 5.
-
 import { ApiError, type AuthSession, type SignInInput, type SignUpInput } from './types';
 import type {
   AddItemInput,
@@ -21,7 +17,6 @@ import type {
 import { getIdToken, getCurrentUser as getCachedCurrentUser, signIn as cognitoSignIn, signOut as cognitoSignOut } from '../auth';
 import { config } from '../config';
 
-// --- AppSync fetch helper ---
 async function gql<T>(
   query: string,
   variables: Record<string, unknown> = {},
@@ -54,8 +49,7 @@ async function gql<T>(
   return json.data;
 }
 
-// --- Auth shims (the AppSync API doesn't have signIn/signUp; the
-// Cognito hosted UI in `auth.ts` handles those). ---
+// AppSync has no signIn/signUp; Cognito hosted UI in auth.ts handles auth.
 
 export async function signIn(_input: SignInInput): Promise<AuthSession> {
   const session = await cognitoSignIn();
@@ -73,8 +67,6 @@ export async function signOut(): Promise<void> {
 export async function getCurrentUser(): Promise<User | null> {
   return getCachedCurrentUser();
 }
-
-// --- Queries ---
 
 const Q_MY_GROUPS = /* GraphQL */ `
   query MyGroups {
@@ -194,8 +186,6 @@ const Q_PENDING_INVITES = /* GraphQL */ `
     }
   }
 `;
-
-// --- Mutations ---
 
 const M_CREATE_GROUP = /* GraphQL */ `
   mutation CreateGroup($input: CreateGroupInput!) {
@@ -372,8 +362,6 @@ const M_DELETE_ITEM = /* GraphQL */ `
   }
 `;
 
-// --- Implementation ---
-
 export async function listMyGroups(): Promise<GroupWithMeta[]> {
   const data = await gql<{ myGroups: GroupWithMeta[] }>(Q_MY_GROUPS);
   return data.myGroups;
@@ -403,20 +391,16 @@ export async function inviteToGroup(
   return data.inviteToGroup;
 }
 
-// Invites addressed to the signed-in user's email that are still pending.
 export async function listPendingInvites(): Promise<Invite[]> {
   const data = await gql<{ pendingInvites: Invite[] }>(Q_PENDING_INVITES);
   return data.pendingInvites;
 }
 
-// Accept an invite; the caller becomes a member and the resolved group
-// is returned so the UI can navigate straight into it.
 export async function acceptInvite(inviteId: string): Promise<Group> {
   const data = await gql<{ acceptInvite: Group }>(M_ACCEPT_INVITE, { inviteId });
   return data.acceptInvite;
 }
 
-// Create (or reuse) a shareable invite link for a group. Admin-only.
 export async function createGroupInviteLink(groupId: string): Promise<InviteLink> {
   const data = await gql<{ createGroupInviteLink: InviteLink }>(M_CREATE_INVITE_LINK, {
     groupId,
@@ -424,17 +408,12 @@ export async function createGroupInviteLink(groupId: string): Promise<InviteLink
   return data.createGroupInviteLink;
 }
 
-// Join a group from a shared link's token. Any signed-in user can call
-// this; the resolved group is returned so the UI can navigate into it.
 export async function joinGroupViaLink(groupId: string, token: string): Promise<Group> {
   const data = await gql<{ joinGroupViaLink: Group }>(M_JOIN_VIA_LINK, { groupId, token });
   return data.joinGroupViaLink;
 }
 
-// --- Membership / role management (admin-only on the backend) ---
-
-// Promote a member to admin or demote an admin to member. The backend
-// refuses to demote the last admin.
+// Backend refuses to demote the last admin.
 export async function setMemberRole(
   groupId: string,
   userId: string,
@@ -447,19 +426,15 @@ export async function setMemberRole(
   return data.setMemberRole;
 }
 
-// Remove someone else from the group (use `leaveGroup` to remove yourself).
 export async function removeMember(groupId: string, userId: string): Promise<void> {
   await gql<{ removeMember: boolean }>(M_REMOVE_MEMBER, { groupId, userId });
 }
 
-// Leave a group. If you're the sole member the group is deleted; if
-// you're the last admin with others still in it, the backend refuses
-// until you hand off admin (or delete the group).
+// Sole member: group deleted. Last admin with others present: backend refuses until handoff.
 export async function leaveGroup(groupId: string): Promise<void> {
   await gql<{ leaveGroup: boolean }>(M_LEAVE_GROUP, { groupId });
 }
 
-// Delete a group and everything in it (admin-only).
 export async function deleteGroup(groupId: string): Promise<void> {
   await gql<{ deleteGroup: boolean }>(M_DELETE_GROUP, { groupId });
 }
@@ -521,14 +496,11 @@ export async function createGroup(input: CreateGroupInput): Promise<Group> {
   return data.createGroup;
 }
 
-// --- Pub/sub (no real subscriptions in v1) ---
 export type Unsubscribe = () => void;
 export type Listener = (data: { type: string }) => void;
 
 export function subscribeToGroup(_groupId: string, _listener: Listener): Unsubscribe {
-  // AppSync subscriptions could be wired here, but they require
-  // additional resolver work (the Lambda would need to publish to
-  // a topic). v1: callers trigger refetches after mutations.
+  // v1 stub: AppSync subscriptions need Lambda publish wiring; callers refetch after mutations.
   return () => {};
 }
 

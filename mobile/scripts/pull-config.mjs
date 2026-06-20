@@ -1,24 +1,9 @@
 #!/usr/bin/env node
-// Materialises mobile/config/{out}.json from a deployed CDK stack's
-// CloudFormation outputs. Used in two places:
-//
-//   - CI (build-apk workflow): writes config/{env}.json before the EAS
-//     build, so the backend wiring is fetched live rather than persisted
-//     by the deploy chain.
-//   - Local dev: point local.json at a deployed sandbox so `expo start`
-//     talks to a real backend (Google sign-in, AppSync). The per-PR
-//     sandbox is ephemeral, so re-run this whenever it redeploys.
-//
-// Requires AWS credentials for the target account on the PATH (the same
-// creds you use for `cdk deploy`).
+// Writes mobile/config/{out}.json from CDK stack outputs (CI build-apk or local sandbox).
 //
 // Usage:
 //   node scripts/pull-config.mjs --stack <name> [--env <code>] \
 //     [--out <file>] [--region <region>]
-//
-// Example (local → current PR sandbox):
-//   node scripts/pull-config.mjs \
-//     --stack pr4-smaran-sandbox-eu-central-1 --env sandbox --out local.json
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -49,7 +34,6 @@ if (!stack) {
   process.exit(1);
 }
 
-// CFN output key → mobile config field.
 const KEY_MAP = {
   UserPoolId: 'userPoolId',
   UserPoolClientId: 'userPoolClientId',

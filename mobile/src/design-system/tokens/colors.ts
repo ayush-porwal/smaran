@@ -1,5 +1,4 @@
-// Indigo accent scale. Light values are vibrant on white; dark values
-// are lifted so the same perceived weight reads on near-black backgrounds.
+// Dark values are lifted so the same perceived weight reads on near-black backgrounds.
 export const indigo = {
   50: { light: '#EEF0FF', dark: '#1A1B3A' },
   100: { light: '#DCE0FF', dark: '#252754' },
@@ -13,7 +12,6 @@ export const indigo = {
   900: { light: '#15164A', dark: '#E8EAFF' },
 } as const;
 
-// Pure neutral scale, no warm/cool tint. Used for backgrounds, borders, text.
 export const neutral = {
   bgCanvas: { light: '#FAFAFA', dark: '#0A0A0A' },
   bgSurface: { light: '#FFFFFF', dark: '#131316' },
@@ -27,7 +25,6 @@ export const neutral = {
   textInverse: { light: '#FAFAFA', dark: '#0A0A0A' },
 } as const;
 
-// Semantic colors. Used sparingly, only to signal state (success/warning/danger/info).
 export const semantic = {
   success: { light: '#16A34A', dark: '#22C55E' },
   warning: { light: '#D97706', dark: '#F59E0B' },

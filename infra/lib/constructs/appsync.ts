@@ -1,27 +1,9 @@
-// AppSyncConstruct: the smaran GraphQL API.
-//
-// Architecture:
-//   - AppSync GraphQL API with Cognito user pool as default auth.
-//   - One Lambda function (Node 20, bundled with esbuild via
-//     `NodejsFunction`) holds the resolver dispatch logic for every
-//     field. AppSync invokes the same Lambda for every Query/Mutation
-//     with `event.info.fieldName` identifying the field.
-//   - The Lambda has read/write IAM on the 5 DynamoDB tables.
-//
-// Why a single Lambda + dispatcher (vs. one resolver per field):
-//   - Less CDK code (one DataSource, one resolver attached to
-//     Query and Mutation type).
-//   - Authorisation logic ("is the user a member of this group?")
-//     is centralised in one file.
-//   - The Lambda stays under 256MB (small cold start).
-//
-// Bundling note: Node.js 20+ Lambda no longer includes `aws-sdk` v2,
-// so we use `NodejsFunction` (esbuild via CDK) to bundle AWS SDK v3
-// into the deploy artifact. v3's modular imports keep the bundle
-// small (~ a few hundred KB after tree-shaking).
-//
-// Cognito auth: every operation requires an id token from the user
-// pool. The Lambda reads `event.identity.sub` to identify the user.
+/**
+ * Single Lambda resolver dispatches on `event.info.fieldName` — keeps
+ * auth logic centralised and CDK wiring minimal (one data source).
+ * Node.js 20 Lambda has no bundled aws-sdk v2; `NodejsFunction` bundles
+ * AWS SDK v3 via esbuild.
+ */
 import * as cdk from "aws-cdk-lib/core";
 import * as appsync from "aws-cdk-lib/aws-appsync";
 import * as cognito from "aws-cdk-lib/aws-cognito";
@@ -48,7 +30,6 @@ export class AppSyncConstruct extends Construct {
   constructor(scope: Construct, id: string, props: AppSyncConstructProps) {
     super(scope, id);
 
-    // --- GraphQL API ---
     this.api = new appsync.GraphqlApi(this, "Api", {
       name: `${props.resourcePrefix}-api`,
       definition: appsync.Definition.fromFile(
@@ -62,16 +43,9 @@ export class AppSyncConstruct extends Construct {
         additionalAuthorizationModes: [],
       },
       xrayEnabled: false,
-      // Introspection enabled in all envs; mobile dev tooling reads
-      // the schema. Production-grade hardening (e.g. disabling
-      // introspection in prod) is a one-line change.
       introspectionConfig: appsync.IntrospectionConfig.ENABLED,
     });
 
-    // --- Lambda data source ---
-    // Bundled with esbuild via CDK so the AWS SDK v3 modules
-    // (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) ship
-    // inside the function zip.
     const fn = new lambdaNodejs.NodejsFunction(this, "ResolverFn", {
       functionName: `${props.resourcePrefix}-appsync-resolver`,
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -100,9 +74,6 @@ export class AppSyncConstruct extends Construct {
       },
     );
 
-    // --- Data source + resolvers ---
-    // We attach one resolver per field. The Lambda dispatches on
-    // `event.info.fieldName` in the handler.
     const ds = this.api.addLambdaDataSource("LambdaDs", fn);
     this.attachFieldResolvers(ds);
   }

@@ -1,8 +1,4 @@
-// Carries a tapped invite link across the sign-in detour. When someone
-// opens an invite link while signed out, `app/join.tsx` stashes the
-// {groupId, token} here and sends them to sign-in; the sign-in screen
-// reads it back on success and resumes the join. This is what makes the
-// "opened the link before logging in" path gap-free.
+// Stashes invite {groupId, token} across sign-in so app/join.tsx can resume after auth.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const KEY = 'smaran.pendingInvite.v1';

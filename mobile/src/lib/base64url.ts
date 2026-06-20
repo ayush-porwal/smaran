@@ -1,13 +1,4 @@
-// Base64URL encoder + decoder for React Native. The browser-style
-// `btoa` / `atob` globals don't exist in the RN JS engine — this
-// module is a dependency-free implementation that's safe in any JS
-// environment, including React Native on iOS and Android.
-//
-// Output is RFC 4648 §5 base64url: `A-Z a-z 0-9 - _`, no padding.
-//
-// `bytesToBase64url` takes raw bytes; `base64urlToBytes` returns raw
-// bytes; `base64urlToString` decodes to a UTF-8 string (use this
-// for JWT payloads).
+// btoa/atob are unavailable in RN; dependency-free base64url for JWT payloads.
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const DECODE: Record<string, number> = {};
 for (let i = 0; i < ALPHABET.length; i++) DECODE[ALPHABET[i]] = i;
@@ -38,7 +29,6 @@ export function bytesToBase64url(bytes: Uint8Array): string {
 }
 
 export function base64urlToString(s: string): string {
-  // Normalise to standard base64 (replace URL-safe chars + add padding).
   let std = s.replace(/-/g, '+').replace(/_/g, '/');
   while (std.length % 4) std += '=';
   let binary = '';
@@ -52,8 +42,6 @@ export function base64urlToString(s: string): string {
     if (std[i + 2] !== '=') binary += String.fromCharCode((triplet >> 8) & 0xff);
     if (std[i + 3] !== '=') binary += String.fromCharCode(triplet & 0xff);
   }
-  // Convert binary string to UTF-8 via TextDecoder (available in modern
-  // RN engines via Hermes/JSC).
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new TextDecoder('utf-8').decode(bytes);

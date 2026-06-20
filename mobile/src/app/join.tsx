@@ -1,12 +1,4 @@
-// Deep-link target for shared invite links: smaran://join?g=<groupId>&t=<token>.
-// Lives at the top level (outside the (app)/(auth) groups) so it's
-// reachable in any auth state.
-//
-// Flow:
-//   - Signed in  → join the group via the token, then go to the group.
-//   - Signed out → stash {groupId, token} and send to sign-in; the
-//     sign-in screen resumes the join on success (see (auth)/sign-in.tsx).
-//   - Bad/expired link → a friendly error with a way back.
+/** Invite deep link (smaran://join?g=&t=). Top-level route so it works signed in or out; sign-in resumes via pendingInvite. */
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
@@ -35,15 +27,14 @@ export default function JoinScreen() {
   useEffect(() => {
     if (loading || !groupId || !token) return;
     if (!user) {
-      // Carry the invite across the sign-in detour; resumed after login.
       void savePendingInvite({ groupId, token });
-      return; // <Redirect> below sends us to sign-in
+      return;
     }
     if (started.current) return;
     started.current = true;
     joinGroupViaLink(groupId, token)
       .then((group) => {
-        bumpVersion("group:any"); // refresh the groups list on home
+        bumpVersion("group:any");
         router.replace({
           pathname: "/(app)/groups/[id]",
           params: { id: group.id },

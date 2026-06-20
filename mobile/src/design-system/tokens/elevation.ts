@@ -1,6 +1,4 @@
-// Elevation uses both shadows and borders depending on mode. In light
-// mode we lean on subtle shadows; in dark mode shadows are reserved for
-// the top two levels and lower elevations get a hairline border instead.
+// Dark mode uses hairline borders for low elevations; shadows only at levels 3–4.
 export const elevationLight = {
   0: 'none',
   1: '0 1px 0 0 #E4E4E7',

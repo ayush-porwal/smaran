@@ -1,12 +1,4 @@
-// Runtime config. Values come from `app.config.ts` -> `expo-constants`
-// so they vary per build (sandbox/staging/prod/local).
-//
-// In CI: the deploy workflow writes `cdk-outputs.json` to
-// `mobile/config/{env}.json`. `app.config.ts` reads the right file
-// based on `SMARAN_ENV` and exposes the values here.
-//
-// In local dev: leave the keys empty; the sign-in screen shows a
-// "config missing" error and the GraphQL client refuses to start.
+// CI deploy writes mobile/config/{env}.json; local dev leaves keys empty (sign-in shows config missing).
 import Constants from 'expo-constants';
 
 type EnvConfig = {
@@ -19,7 +11,6 @@ type EnvConfig = {
 
 const extra = (Constants.expoConfig?.extra ?? {}) as Partial<EnvConfig>;
 
-// Guard: every non-extra field is required at runtime.
 function read(): EnvConfig {
   const envCode = (extra.envCode ?? 'local') as EnvConfig['envCode'];
   return {

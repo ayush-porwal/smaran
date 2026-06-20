@@ -1,12 +1,3 @@
-// ThemeProvider sits between TamaguiProvider and the screen tree. It:
-//   1. Loads the persisted theme preference (light/dark/system) from
-//      AsyncStorage on mount,
-//   2. Exposes it via ThemePreferenceContext,
-//   3. Resolves the effective scheme via useResolvedScheme and wraps
-//      the tree in the matching Tamagui `<Theme name="..." />`.
-//
-// System color scheme is the default; the settings screen can override
-// it via the `setPreference` callback returned from `useThemeControls`.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
@@ -80,9 +71,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Inner component subscribes to system + preference changes; rendered
-// once hydration finishes so the first paint matches storage rather
-// than the system's transient value.
 function ThemedContent({
   children,
   hydrated,
@@ -91,8 +79,7 @@ function ThemedContent({
   hydrated: boolean;
 }) {
   const resolved = useResolvedScheme();
-  // Block the first paint until storage has been read; otherwise the
-  // user sees a brief flash of the wrong theme.
+  // Wait for AsyncStorage before first paint to avoid a theme flash.
   if (!hydrated) return null;
   return (
     <Theme name={resolved}>

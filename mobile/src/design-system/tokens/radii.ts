@@ -1,6 +1,4 @@
-// Border radius scale. Spec section 6. Tamagui's default radius tokens
-// use plain numeric keys (0, 1, 2, …, true, 12); we override with
-// semantic names that match the design spec verbatim.
+// Tamagui radius tokens use plain keys (sm, md, …), not `$`-prefixed names.
 export const radius = {
   0: 0,
   sm: 6,

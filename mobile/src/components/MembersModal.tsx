@@ -1,9 +1,4 @@
-// Members & roles management for a group. Everyone can open it to see
-// who's in the group; admins additionally get controls to promote/demote
-// other members and remove them. The footer carries "Leave group" (all)
-// and "Delete group" (admins). Destructive actions confirm via a native
-// Alert. The backend enforces the real invariants (e.g. a group always
-// keeps at least one admin); the UI just surfaces clear errors.
+// Backend enforces invariants (e.g. at least one admin); UI surfaces errors via toast.
 import { useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { ScrollView, View, YStack } from "tamagui";
@@ -29,9 +24,7 @@ type MembersModalProps = {
   groupName: string;
   currentUserId: string;
   isAdmin: boolean;
-  // Refetch the group + member list after a role change or removal.
   onMembersChanged: () => void;
-  // Navigate away after the current user leaves or deletes the group.
   onLeftGroup: () => void;
 };
 
@@ -51,7 +44,6 @@ export function MembersModal({
 }: MembersModalProps) {
   const toast = useToast();
   const [members, setMembers] = useState<Member[] | null>(null);
-  // userId of the row with an action in flight (disables its controls).
   const [busyId, setBusyId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
 
@@ -68,7 +60,6 @@ export function MembersModal({
 
   useEffect(() => {
     if (!open) return;
-    // Refetch each time the sheet opens so roles are current.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMembers(null);
     load();

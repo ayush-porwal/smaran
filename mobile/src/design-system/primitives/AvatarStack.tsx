@@ -1,6 +1,3 @@
-// AvatarStack: overlapping row of Avatars. Up to 4 visible; the rest
-// collapse into a "+N" pill. Used on group cards and list headers to
-// show who else is in the room.
 import { Avatar, XStack, Text } from 'tamagui';
 
 type AvatarStackProps = {

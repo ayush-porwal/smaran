@@ -1,10 +1,4 @@
-// List: FlashList wrapper. Pulls in @shopify/flash-list under the hood
-// for virtualization on long lists. Items are separated by a 1px hairline
-// using `$borderDefault` so the rhythm reads even on the canvas color.
-//
-// FlashList v2 removed `estimatedItemSize` (it auto-estimates from the
-// first few renders), so we no longer pass it. `keyExtractor` defaults
-// to `item.id`; override for composite keys.
+// FlashList v2 dropped `estimatedItemSize` — it auto-estimates from early renders.
 import { FlashList } from '@shopify/flash-list';
 import { Separator, View, YStack } from 'tamagui';
 import type { ListRenderItem } from '@shopify/flash-list';

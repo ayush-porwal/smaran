@@ -1,19 +1,3 @@
-// SmaranStack: the root CDK stack for a single environment.
-//
-// Phases landed:
-//   - Phase 1: bootstrap, empty stack, LocalStack
-//   - Phase 2: CI/CD workflows (in `.github/workflows/`, not in code)
-//   - Phase 3: Cognito user pool + Google OAuth
-//   - Phase 3.5: Route 53 subdomain delegation + ACM cert (prod only)
-//   - Phase 4: DynamoDB tables
-//   - Phase 5: AppSync GraphQL + Lambda resolver dispatcher
-//
-// Pending:
-//   - (none — Phases 6-8 are mobile-side, not infra)
-//
-// `resourcePrefix` flows into every nested construct so the final
-// CloudFormation resource names look like `{prefix}-{construct-id}`
-// (e.g. `pr1234-smaran-sandbox-cognito`).
 import * as cdk from "aws-cdk-lib/core";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
@@ -39,18 +23,12 @@ export class SmaranStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: SmaranStackProps) {
     super(scope, id, props);
 
-    // Tag every resource with the env so cost reports and the AWS
-    // console's resource group filters work without extra wiring.
     cdk.Tags.of(this).add("app", "smaran");
     cdk.Tags.of(this).add("env", props.envCode);
     cdk.Tags.of(this).add("resource-prefix", props.resourcePrefix);
 
-    // --- Cognito (Phase 3) ---
-    // Google OAuth credentials come from Secrets Manager, not CDK
-    // context. Sandbox/staging/prod reference the manually-created
-    // `smaran/{env}/google-oauth` secret in their own account; LOCAL
-    // creates a placeholder secret in LocalStack so the user pool
-    // has something to bind to without requiring a manual step.
+    // LOCAL creates a placeholder secret in LocalStack; other envs
+    // reference the manually-created `smaran/{env}/google-oauth` secret.
     const isLocal = props.envCode === EnvCodes.LOCAL;
     const googleOAuthSecret: secretsmanager.ISecret = isLocal
       ? new secretsmanager.Secret(this, "GoogleOAuthSecret", {
@@ -74,20 +52,16 @@ export class SmaranStack extends cdk.Stack {
       googleOAuthSecret,
     });
 
-    // --- DNS (Phase 3.5) ---
-    // Self-skips in non-prod. See lib/constructs/dns.ts.
     this.dns = new DnsConstruct(this, "Dns", {
       envCode: props.envCode,
       resourcePrefix: props.resourcePrefix,
     });
 
-    // --- DynamoDB (Phase 4) ---
     this.dynamodb = new DynamoDbConstruct(this, "DynamoDB", {
       envCode: props.envCode,
       resourcePrefix: props.resourcePrefix,
     });
 
-    // --- AppSync (Phase 5) ---
     this.appsync = new AppSyncConstruct(this, "AppSync", {
       envCode: props.envCode,
       resourcePrefix: props.resourcePrefix,
@@ -99,11 +73,7 @@ export class SmaranStack extends cdk.Stack {
       itemsTable: this.dynamodb.itemsTable,
     });
 
-    // --- Outputs ---
-    // The mobile app reads these to know which user pool + client to
-    // point at. The CI workflow writes them to a JSON file the
-    // mobile app's release process consumes (see
-    // `.github/workflows/deploy-*.yaml` for `--outputs-file`).
+    // Consumed by the mobile app / CI `--outputs-file` workflow.
     new cdk.CfnOutput(this, "UserPoolId", {
       value: this.cognito.userPool.userPoolId,
       description: "Cognito user pool ID",
@@ -125,7 +95,6 @@ export class SmaranStack extends cdk.Stack {
       description: "Full hosted UI URL the mobile app opens in the browser",
       exportName: `${props.resourcePrefix}-hosted-ui-url`,
     });
-    // DynamoDB outputs (Phase 4)
     new cdk.CfnOutput(this, "GroupsTableName", {
       value: this.dynamodb.groupsTable.tableName,
       description: "DynamoDB groups table name",
@@ -151,7 +120,6 @@ export class SmaranStack extends cdk.Stack {
       description: "DynamoDB list items table name",
       exportName: `${props.resourcePrefix}-items-table-name`,
     });
-    // AppSync outputs (Phase 5)
     new cdk.CfnOutput(this, "GraphQLApiId", {
       value: this.appsync.api.apiId,
       description: "AppSync GraphQL API ID",

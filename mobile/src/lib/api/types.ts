@@ -1,11 +1,7 @@
-// Domain types. These mirror the AppSync / GraphQL schema in
-// `infra/lib/graphql/schema.graphql`. The data layer lives in
-// `lib/api/graphql.ts`; this file is the shared type surface.
-
+// Mirrors infra/lib/graphql/schema.graphql.
 export type ID = string;
 export type ISODateString = string;
 
-// Users
 export type User = {
   id: ID;
   email: string;
@@ -13,7 +9,6 @@ export type User = {
   createdAt: ISODateString;
 };
 
-// Groups
 export type GroupColor = 'indigo' | 'violet' | 'rose' | 'amber' | 'emerald' | 'sky';
 
 export type Group = {
@@ -41,7 +36,6 @@ export type GroupWithMeta = Group & {
   listCount: number;
 };
 
-// Invites
 export type InviteStatus = 'pending' | 'accepted' | 'expired';
 
 export type Invite = {
@@ -57,8 +51,6 @@ export type Invite = {
   group?: Group;
 };
 
-// A shareable, non-email-bound group invite link. Anyone signed in who
-// opens a link carrying this token joins the group.
 export type InviteLink = {
   groupId: ID;
   token: string;
@@ -67,7 +59,6 @@ export type InviteLink = {
   expiresAt: ISODateString;
 };
 
-// Lists (and items)
 export type List = {
   id: ID;
   groupId: ID;
@@ -92,11 +83,8 @@ export type ListItem = {
   order: number;
 };
 
-// Auth
 export type AuthSession = {
   user: User;
-  // Cognito id token (JWT); attached as the bearer token on every
-  // AppSync request.
   token: string;
 };
 
@@ -111,7 +99,6 @@ export type SignInInput = {
   password: string;
 };
 
-// Inputs
 export type CreateGroupInput = {
   name: string;
   emoji: string;
@@ -129,7 +116,6 @@ export type AddItemInput = {
   text: string;
 };
 
-// Errors
 export type ApiErrorCode =
   | 'unauthenticated'
   | 'not_found'

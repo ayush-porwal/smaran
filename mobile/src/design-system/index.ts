@@ -1,7 +1,3 @@
-// Single import path for the design system. Feature code does:
-//   import { Screen, Text, Pressable, useTheme } from '@/design-system';
-// rather than reaching into individual files. Keeps the surface narrow
-// and refactors easy.
 export * from './tamagui.config';
 export * from './tokens';
 export * from './theme';

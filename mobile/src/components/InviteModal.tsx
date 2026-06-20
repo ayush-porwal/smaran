@@ -1,8 +1,4 @@
-// Modal for inviting people to a group via a shareable link. On open it
-// creates (or reuses) the group's invite link and shows it; "Share link"
-// opens the native share sheet so the admin can send it through any app.
-// Anyone who opens the link and signs in joins the group — there's no
-// email delivery (see app/join.tsx for the receiving side).
+// Shareable link invite — no email delivery; recipients join via app/join.tsx.
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Share } from "react-native";
 import { View, YStack } from "tamagui";
@@ -64,7 +60,6 @@ export function InviteModal({ open, onOpenChange, groupId, groupName }: InviteMo
     try {
       await Share.share({ message: `Join "${groupName}" on Smaran: ${state.url}` });
     } catch {
-      // User dismissed the share sheet — nothing to do.
     }
   }
 

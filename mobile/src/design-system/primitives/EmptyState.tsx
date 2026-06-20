@@ -1,6 +1,3 @@
-// EmptyState: icon + title + description + optional CTA. Used inside
-// screens when the underlying data is empty ("No groups yet — make your
-// first one"). Centered vertically and horizontally.
 import { YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 

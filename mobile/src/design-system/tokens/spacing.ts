@@ -1,8 +1,4 @@
-// 4px base spacing scale. Tamagui v2 expects size/space token keys to
-// be prefixed with `$` (e.g. `$4`), so we name ours the same way the
-// default config does. Using numbers (not t-shirt names) lets us
-// reference the same scale from padding, gap, and margin props without
-// translation.
+// Tamagui v2 expects `$`-prefixed space/size keys (e.g. `$4`).
 export const space = {
   $0: 0,
   $1: 4,
@@ -28,9 +24,7 @@ export const space = {
 
 export type SpaceToken = keyof typeof space;
 
-// Screen-level rhythm tokens, used by primitives that need them directly
-// (Screen padding, section gaps). Kept here so the spec's "16/12/24"
-// rhythm has a named home and doesn't end up as a magic number.
+// Named rhythm for Screen padding and section gaps (16/12/24).
 export const rhythm = {
   screenPadding: space.$4, // 16
   itemGap: space.$3, // 12

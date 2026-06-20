@@ -1,6 +1,3 @@
-// Hook returning the current Cognito user. The session state is
-// mirrored to a Zustand-like module variable (see `session.ts`)
-// so screens re-render on sign-in / sign-out.
 import { useEffect, useState } from 'react';
 
 import { getCurrentUser } from '../auth';
@@ -12,9 +9,7 @@ export function useCurrentUser(): { user: User | null; loading: boolean } {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
-    // `loading` is already `true` from `useState(true)`; no need to
-    // re-set it here. (And setting it synchronously in the effect
-    // would trip react-hooks/set-state-in-effect.)
+    // Don't setLoading(true) here — react-hooks/set-state-in-effect.
     getCurrentUser()
       .then((u) => {
         if (cancelled) return;

@@ -1,7 +1,3 @@
-// Modal for creating a new group. Captures name, emoji, and a color
-// (from the spec's six GroupColor options). On submit, calls
-// `createGroup` and emits the new group's id to the parent so it can
-// navigate to the new group's home.
 import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 

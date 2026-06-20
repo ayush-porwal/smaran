@@ -1,9 +1,3 @@
-// ListItem: a single row in a list. Has `leading`, `title`, optional
-// `description`, and `trailing` slots. Pressable by default; set
-// `onPress` to make it interactive. Disabled state dims opacity.
-//
-// Spec section 6: radius md (10). Spec section 8.3: list item press
-// is a 0.97 scale via the inner PressableScale.
 import { XStack, View } from 'tamagui';
 import type { ReactNode } from 'react';
 

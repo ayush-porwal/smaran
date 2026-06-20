@@ -27,7 +27,6 @@ function makeStack(
   });
 }
 
-// --- prod (no PR prefix) ---
 makeStack(
   EnvCodes.PROD,
   Accounts.PROD,
@@ -42,13 +41,9 @@ makeStack(
   STACK_NAME_PREFIX_BY_ENV[EnvCodes.STAGING],
 );
 
-// --- sandbox (optionally PR-prefixed) ---
-// CDK_STACK_PREFIX must include the trailing dash itself (e.g.
-// "pr3-") so the stack name becomes `pr3-smaran-sandbox-{region}`.
-// We do NOT add another dash here; doing so produced
-// `pr3--smaran-sandbox-…` (double dash) and broke
-// `cdk diff`/`cdk destroy` from the workflows, which target the
-// single-dash form.
+// CDK_STACK_PREFIX must include the trailing dash (e.g. "pr3-").
+// Do NOT add another dash here — that produced `pr3--smaran-sandbox-…`
+// and broke `cdk diff`/`cdk destroy` from the workflows.
 {
   const prPrefix = process.env["CDK_STACK_PREFIX"];
   const sandboxNamePrefix = prPrefix

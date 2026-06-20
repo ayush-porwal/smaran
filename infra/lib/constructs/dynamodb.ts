@@ -1,31 +1,18 @@
-// DynamoDbConstruct: the five core tables for the smaran app.
-// All tables use PAY_PER_REQUEST billing (no provisioned capacity
-// to manage) and have a retention policy driven by `envCode`.
-//
-// Access patterns the schema has to support:
-//   1. List all groups a user is a member of (membership lookup)
-//   2. List all members of a group (membership lookup)
-//   3. Fetch a single group / list / item by id
-//   4. List all lists in a group
-//   5. List all items in a list
-//   6. List pending invites for a user (by email)
-//
-// Schema:
-//   Groups         PK = groupId
-//                  GSI: ByOwner (ownerUserId PK, createdAt SK)
-//
-//   GroupMemberships
-//                  PK = groupId, SK = userId
-//                  GSI: ByUser (userId PK, joinedAt SK)
-//
-//   Invites        PK = groupId, SK = inviteId
-//                  GSI: ByEmail (email PK, createdAt SK)
-//
-//   Lists          PK = listId
-//                  GSI: ByGroup (groupId PK, createdAt SK)
-//
-//   ListItems      PK = listId, SK = itemId
-//                  GSI: ByCreator (createdByUserId PK, createdAt SK)
+/**
+ * Five core tables (PAY_PER_REQUEST, retention driven by `envCode`):
+ *
+ *   Groups         PK = groupId
+ *                  GSI: ByOwner (ownerUserId, createdAt)
+ *   GroupMemberships
+ *                  PK = groupId, SK = userId
+ *                  GSI: ByUser (userId, joinedAt)
+ *   Invites        PK = groupId, SK = inviteId
+ *                  GSI: ByEmail (email, createdAt)
+ *   Lists          PK = listId
+ *                  GSI: ByGroup (groupId, createdAt)
+ *   ListItems      PK = listId, SK = itemId
+ *                  GSI: ByCreator (createdByUserId, createdAt)
+ */
 import * as cdk from "aws-cdk-lib/core";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Construct } from "constructs";
@@ -55,16 +42,11 @@ export class DynamoDbConstruct extends Construct {
 
     const common: Omit<dynamodb.TableProps, "tableName" | "partitionKey" | "sortKey"> = {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      // Point-in-time recovery (PITR) lets us restore to any
-      // second in the last 35 days. Costs ~20% extra on storage;
-      // turned on for prod only.
       pointInTimeRecovery: isRetain,
-      // Encryption at rest with AWS-managed KMS keys (free).
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
       removalPolicy,
     };
 
-    // --- Groups ---
     this.groupsTable = new dynamodb.Table(this, "GroupsTable", {
       ...common,
       tableName: `${resourcePrefix}-groups`,
@@ -77,7 +59,6 @@ export class DynamoDbConstruct extends Construct {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // --- Group Memberships ---
     this.membershipsTable = new dynamodb.Table(this, "MembershipsTable", {
       ...common,
       tableName: `${resourcePrefix}-group-memberships`,
@@ -91,14 +72,12 @@ export class DynamoDbConstruct extends Construct {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // --- Invites ---
     this.invitesTable = new dynamodb.Table(this, "InvitesTable", {
       ...common,
       tableName: `${resourcePrefix}-invites`,
       partitionKey: { name: "groupId", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "inviteId", type: dynamodb.AttributeType.STRING },
-      // Expired invites auto-delete; the resolver writes `ttl` as
-      // epoch seconds alongside the ISO `expiresAt`.
+      // Resolver writes `ttl` (epoch seconds) alongside ISO `expiresAt`.
       timeToLiveAttribute: "ttl",
     });
     this.invitesTable.addGlobalSecondaryIndex({
@@ -108,7 +87,6 @@ export class DynamoDbConstruct extends Construct {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // --- Lists ---
     this.listsTable = new dynamodb.Table(this, "ListsTable", {
       ...common,
       tableName: `${resourcePrefix}-lists`,
@@ -121,7 +99,6 @@ export class DynamoDbConstruct extends Construct {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // --- List Items ---
     this.itemsTable = new dynamodb.Table(this, "ItemsTable", {
       ...common,
       tableName: `${resourcePrefix}-list-items`,

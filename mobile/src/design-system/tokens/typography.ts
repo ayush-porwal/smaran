@@ -1,12 +1,6 @@
-// System UI fonts on every platform. Native uses the OS default (SF on
-// iOS, Roboto on Android); web uses the standard system-ui stack. We
-// keep the same size/weight/line-height scale as before — only the
-// family changes.
-// Use @tamagui/core's platform flags rather than react-native's
-// `Platform`. The Tamagui babel plugin statically loads this config in
-// Node (no react-native runtime), so importing `react-native` here made
-// config evaluation throw → "Missing themes" → compile-time styles
-// silently disabled. @tamagui/core is loadable in that context.
+// Use @tamagui/core platform flags — not react-native `Platform`. The Tamagui
+// babel plugin loads this config in Node (no RN runtime); importing
+// `react-native` here throws → "Missing themes" → compile-time styles disabled.
 import { createFont, isWeb, isIos } from "@tamagui/core";
 
 const systemFamily = isWeb
@@ -17,8 +11,6 @@ const systemFamily = isWeb
 
 const fontConfig = {
   family: systemFamily,
-  // Size tokens mirror the spec's pixel scale. Tamagui sizes double as
-  // an indexable scale (size.$4), so a 13 -> 4 mapping is intentional.
   size: {
     1: 12,
     2: 13,
@@ -34,7 +26,6 @@ const fontConfig = {
     12: 36,
     13: 40,
   },
-  // Line heights per spec. Each entry is keyed by size index.
   lineHeight: {
     1: 16,
     2: 18,
@@ -50,8 +41,6 @@ const fontConfig = {
     12: 44,
     13: 48,
   },
-  // Spec section 4.2 weight assignments. Tamagui's weight keys are
-  // strings or numbers; we use numbers for compactness.
   weight: {
     1: "400",
     2: "400",
@@ -63,8 +52,6 @@ const fontConfig = {
     8: "700",
     9: "700",
   },
-  // Spec section 4.2 letter spacings. Display sizes tighten; body stays
-  // at 0; labels widen slightly.
   letterSpacing: {
     1: 0,
     2: 0,
@@ -84,14 +71,9 @@ const fontConfig = {
 
 export const bodyFont = createFont(fontConfig);
 
-// Same family for headings; tokens stay shared.
 export const headingFont = bodyFont;
 
-// Spec section 4.2 text variants. `<Text variant="body.md" />` resolves
-// to the size/weight/line-height/letter-spacing combo in one place.
-// `fontWeight` is keyed against the `weight` index above.
 export const textVariants = {
-  // Display
   "display.lg": {
     fontSize: 13,
     lineHeight: 13,
@@ -111,7 +93,6 @@ export const textVariants = {
     letterSpacing: -0.5,
   },
 
-  // Headings
   "heading.lg": {
     fontSize: 9,
     lineHeight: 9,
@@ -131,7 +112,6 @@ export const textVariants = {
     letterSpacing: 0,
   },
 
-  // Body
   "body.lg": {
     fontSize: 6,
     lineHeight: 6,
@@ -151,7 +131,6 @@ export const textVariants = {
     letterSpacing: 0.1,
   },
 
-  // Labels
   "label.md": {
     fontSize: 2,
     lineHeight: 2,

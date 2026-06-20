@@ -1,21 +1,8 @@
-// Module-level pub/sub for client-side invalidation. Two distinct
-// event types share this module:
-//
-// 1. Session events — fired on sign-in / sign-out via
-//    `notifySessionChanged()`. Subscribers: the AppSync client
-//    (drops the token cache), any screen that wants to refetch
-//    user-scoped data on auth transitions.
-//
-// 2. Per-resource events — fired by `bumpVersion(topic)` after
-//    mutations (`'group:any'`, `'list:<id>'`, `'group:<id>'`,
-//    etc.). Subscribers: `useStoreVersion(topic)` re-renders when
-//    its topic is bumped so React Query / Apollo / custom hooks
-//    refetch.
-//
-// Per-resource bumps are still a client-side pub/sub stub today:
-// mutation handlers in `graphql.ts` are the planned call sites
-// but are not wired yet. AppSync real-time subscriptions
-// (`graphql-ws` over a `wss://` endpoint) are the future phase.
+/**
+ * Client-side invalidation pub/sub. Session events (sign-in/out via
+ * notifySessionChanged) and per-resource bumps (bumpVersion). Mutation
+ * handlers do not call bumpVersion yet; AppSync subscriptions are future work.
+ */
 type Listener = () => void;
 
 const sessionListeners = new Set<Listener>();
@@ -46,7 +33,6 @@ export function subscribeTopic(topic: string, fn: Listener): () => void {
   };
 }
 
-/** Bump the version for `topic`. All subscribers are notified. */
 export function bumpVersion(topic: string): void {
   topicListeners.get(topic)?.forEach((l) => l());
 }

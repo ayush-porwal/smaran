@@ -1,23 +1,8 @@
-// Shared constants used across stacks, constructs, and bin/.
-//
-// Conventions:
-//   - Account IDs are 12-digit AWS account IDs (no dashes).
-//   - Region: eu-central-1 (Frankfurt) for all envs. Change here if
-//     you need a different region; downstream stacks and the GitHub
-//     OIDC role trust policy both read this.
-//   - EnvCodes are also used as the suffix for stack names
-//     (`smaran-{envCode}-{region}`).
-
 export enum Accounts {
-  /** AWS account where every PR's ephemeral sandbox stack lives. */
   SANDBOX = "219602461448",
-  /** AWS account where the staging stack lives. */
   STAGING = "139316820779",
-  /** AWS account where the prod stack lives. */
   PROD = "916657620124",
-  /** AWS account where shared CI/CD infra lives (GitHub OIDC role). */
   INFRA = "126606499529",
-  /** LocalStack dummy account for local dev. */
   LOCAL = "000000000000",
 }
 
@@ -29,7 +14,6 @@ export enum EnvCodes {
 }
 
 export enum Regions {
-  /** eu-central-1 (Frankfurt). All envs deploy here. */
   PRIMARY = "eu-central-1",
 }
 
@@ -50,7 +34,6 @@ export const RETAIN_BY_ENV: Record<EnvCodes, boolean> = {
   [EnvCodes.PROD]: true,
 };
 
-/** Convenience: the retention policy to use for a given env. */
 export function retentionFor(envCode: EnvCodes): "destroy" | "retain" {
   return RETAIN_BY_ENV[envCode] ? "retain" : "destroy";
 }
@@ -58,7 +41,7 @@ export function retentionFor(envCode: EnvCodes): "destroy" | "retain" {
 /**
  * Per-env resource name prefix. Sandbox stacks also prepend the PR
  * number (e.g. `pr1234-smaran-sandbox`) so concurrent PRs don't
- * collide. See bin/app.ts for the PR prefix logic.
+ * collide. See `bin/smaran.ts` for the PR prefix logic.
  */
 export const STACK_NAME_PREFIX_BY_ENV: Record<EnvCodes, string> = {
   [EnvCodes.LOCAL]: "smaran-local",
@@ -86,9 +69,7 @@ export const COGNITO_DOMAIN_PREFIX_BY_ENV: Record<EnvCodes, string> = {
  * callback can't accidentally land in the wrong env.
  */
 export type OAuthCallbackConfig = {
-  /** Where the Cognito hosted UI redirects after a successful sign-in. */
   callbackUrls: string[];
-  /** Where the hosted UI redirects on sign-out. */
   signOutUrls: string[];
 };
 
@@ -132,9 +113,6 @@ export function googleOAuthSecretName(envCode: EnvCodes): string {
  * new public hosted zone for the subdomain in the prod account;
  * a one-time manual step adds the delegation NS records to the
  * parent zone in the management account.
- *
- * Subdomain records managed in this stack:
- *   - api.smaran.ayushporwal.com  →  AppSync domain (Phase 5)
  *
  * Sandbox and staging keep the default `*.auth.{region}.amazoncognito.com`
  * Cognito hosted-UI domain — no custom DNS needed there.

@@ -1,6 +1,4 @@
-// Tamagui config (v2 shape). Tamagui v2 nests the named scales
-// (color/space/size/radius/zIndex) under `tokens`; v1 used top-level
-// `size`/`space`/`radius` keys. We follow v2.
+// Tamagui v2 nests color/space/size/radius under `tokens` (v1 used top-level keys).
 import { createTamagui } from 'tamagui';
 import { config as defaultConfig } from '@tamagui/config';
 
@@ -9,10 +7,7 @@ import { space } from './tokens/spacing';
 import { radius } from './tokens/radii';
 import { indigo, neutral, semantic } from './tokens/colors';
 
-// Theme color maps. The flat object is what Tamagui exposes as
-// `theme.<key>` when the active theme is set. Custom keys
-// (bgSurface, accent, etc.) live here alongside Tamagui's required
-// `background` and `color` keys.
+// Custom theme keys sit alongside Tamagui's required `background` and `color`.
 const lightTheme = {
   background: neutral.bgCanvas.light,
   color: neutral.textPrimary.light,
@@ -91,17 +86,13 @@ export const tamaguiConfig = createTamagui({
     radius,
   },
   themes,
-  // Reusable text variants. `<Text variant="body.md" />` resolves these.
   textVariants,
-  // Media query breakpoints. Phone is the only target in Phase 0;
-  // tablet/desktop are placeholders for later.
   media: {
     xs: { maxWidth: 320 },
     sm: { maxWidth: 640 },
     md: { maxWidth: 768 },
     lg: { maxWidth: 1024 },
   },
-  // Default scheme when no override is set.
   defaultTheme: 'light',
 });
 

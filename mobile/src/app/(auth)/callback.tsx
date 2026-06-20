@@ -1,7 +1,4 @@
-// OAuth callback. expo-auth-session / WebBrowser's `openAuthSessionAsync`
-// handles the redirect for us; this screen only exists so the
-// `smaran://callback` deep link has a route to land on when the OS
-// re-opens the app. We immediately redirect into the (app) tabs.
+/** Route target for smaran://callback. Token exchange runs in auth.ts before this screen mounts. */
 import { useEffect } from 'react';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
@@ -14,9 +11,6 @@ export default function CallbackScreen() {
   const params = useLocalSearchParams<{ code?: string; error?: string }>();
 
   useEffect(() => {
-    // The auth flow itself exchanges the code (in `auth.ts`) and
-    // stores the tokens before the redirect lands here. This
-    // screen is a destination for the OS-level re-open.
     void params;
   }, [params]);
 

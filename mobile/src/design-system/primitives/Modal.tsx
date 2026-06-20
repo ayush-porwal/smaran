@@ -1,9 +1,3 @@
-// Modal: thin wrapper over Tamagui's `Dialog` that uses our motion
-// timings and theme tokens. Use for confirmations, full-screen forms,
-// or any focused task that needs to interrupt the underlying screen.
-//
-// Sheet (bottom drawer) is from Tamagui's `Sheet` and is exported
-// separately. Modals are center-prompt; sheets slide from the bottom.
 import { Dialog, YStack, View } from 'tamagui';
 import { type ReactNode } from 'react';
 
@@ -16,14 +10,10 @@ type ModalProps = {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  // Optional leading element (usually a 56px-tall circular icon
-  // container). Rendered above the title.
   icon?: ReactNode;
   children?: ReactNode;
   primaryAction?: { label: string; onPress: () => void; loading?: boolean };
   secondaryAction?: { label: string; onPress: () => void };
-  // When true, the primary action renders in the danger style and
-  // the icon container uses a danger-tinted background.
   destructive?: boolean;
 };
 

@@ -1,8 +1,4 @@
-// A banner of outstanding group invitations addressed to the signed-in
-// user (matched by their email on the backend). Renders nothing when
-// there are none, so the groups screen is unchanged for users without
-// invites. Accepting adds the user to the group and asks the parent to
-// refetch its group list, since they're now a member of a new one.
+// Renders nothing when empty. Invites matched by email on the backend.
 import { useCallback, useEffect, useState } from "react";
 import { View, YStack } from "tamagui";
 
@@ -15,8 +11,6 @@ import {
 } from "@/lib/api";
 
 type PendingInvitesProps = {
-  // Called after an invite is accepted so the parent can refetch the
-  // user's groups. `groupId` is the group they just joined.
   onAccepted?: (groupId: string) => void;
 };
 
@@ -28,8 +22,7 @@ export function PendingInvites({ onAccepted }: PendingInvitesProps) {
   const load = useCallback(() => {
     listPendingInvites()
       .then(setInvites)
-      // Invites are a secondary surface; if the fetch fails we just hide
-      // the banner rather than blocking the groups screen with an error.
+      // Hide the banner on fetch failure — invites are a secondary surface.
       .catch(() => setInvites([]));
   }, []);
 

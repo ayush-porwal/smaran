@@ -1,7 +1,3 @@
-// Placeholder smoke test — Phase 1 only asserts that the empty
-// SmaranStack synthesises without throwing. Real assertions (resource
-// counts, IAM policy shape, retention policy on each resource, etc.)
-// land alongside the constructs in later phases.
 import * as cdk from "aws-cdk-lib/core";
 import { Template } from "aws-cdk-lib/assertions";
 
@@ -18,15 +14,12 @@ describe("SmaranStack", () => {
     });
     const template = Template.fromStack(stack);
 
-    // Cognito (Phase 3)
     template.resourceCountIs("AWS::Cognito::UserPool", 1);
     template.resourceCountIs("AWS::Cognito::UserPoolClient", 1);
     template.resourceCountIs("AWS::Cognito::UserPoolDomain", 1);
 
-    // DynamoDB (Phase 4)
     template.resourceCountIs("AWS::DynamoDB::Table", 5);
 
-    // AppSync (Phase 5)
     template.resourceCountIs("AWS::AppSync::GraphQLApi", 1);
     template.resourceCountIs("AWS::Lambda::Function", 1);
   });
