@@ -3,85 +3,108 @@
 A mobile app for sharing lists inside small, trusted groups (3–12 people)
 — shared groceries, todos, and the like. Calm, fast, dark-mode-first.
 
-> Monorepo (`npm` workspaces + Turborepo): an AWS CDK backend (`infra/`)
-> and an Expo + Tamagui app (`mobile/`), wired together by GitHub Actions
-> CI/CD. Install dependencies once at the repo root.
+Monorepo (`npm` workspaces + Turborepo): an AWS CDK backend (`infra/`)
+and an Expo + Tamagui app (`mobile/`), with shared tooling in `packages/`.
+Install dependencies once at the repo root.
 
 ## Layout
 
 ```
 smaran/
-├── infra/        AWS CDK backend — Cognito (Google sign-in), DynamoDB,
-│                 AppSync GraphQL + Lambda resolver, Route 53
-├── mobile/       Expo + Tamagui app (iOS, Android, web)
-├── packages/     shared tooling (`@smaran/eslint-config`)
-├── docs/         design spec + setup/handoff guides
-└── .github/      CI/CD caller workflows + a local composite action
+├── infra/           AWS CDK backend — Cognito (Google sign-in), DynamoDB,
+│                    AppSync GraphQL + Lambda resolver, Route 53
+├── mobile/          Expo + Tamagui app (iOS, Android, web)
+├── packages/        shared config (`@smaran/eslint-config`)
+├── .github/
+│   ├── workflows/   CI/CD caller workflows (see workflows/README.md)
+│   ├── deploy-envs.json   env → AWS account/stack mapping for build-apk
+│   └── BRANCH_PROTECTION.md   how to gate merges on green CI
+├── AGENTS.md        notes for coding agents
+└── turbo.json       Turborepo task graph
 ```
 
-Each of `infra/` and `mobile/` is an npm workspace with its own README.
+Each workspace has its own README where noted below.
 
 ## Quick start
 
 ```bash
-# Once at the repo root (installs all workspaces + git hooks)
+# Once at the repo root (installs all workspaces + Husky pre-commit hook)
 npm install
 
-# Mobile app (against the local placeholder config)
-npm run start --workspace=smaran    # or: cd mobile && npx expo start
+# Mobile app (local placeholder config — see mobile/README.md)
+npm run start --workspace=smaran
+# or: cd mobile && npm run start
 
 # Infra (LocalStack iteration)
 npm run synth:local --workspace=smaran-infra
 # first time: cd infra && docker compose up -d
 
-# Lint / format / typecheck (whole repo)
+# Lint / format / typecheck / test (whole repo via Turborepo)
 npm run lint
-npm run format
+npm run format          # write
+npm run format:check    # CI uses this
 npm run typecheck
+npm run test
 ```
 
-To run the app against a real backend, point `SMARAN_ENV` at a deployed
-env — full walkthrough in [`docs/HANDOFF.md`](docs/HANDOFF.md).
+### Run against a deployed backend
+
+From `mobile/`, pull live Cognito/AppSync config from a deployed stack:
+
+```bash
+cd mobile
+npm run config:pull -- --stack smaran-staging-eu-central-1 --env staging
+# writes mobile/config/staging.json; set SMARAN_ENV=staging when starting
+```
+
+Sandbox stacks are named `pr{N}-smaran-sandbox-eu-central-1` (one per open PR).
 
 ## Tech stack
 
 - **Backend:** AWS CDK (TypeScript), Cognito + Google IdP, DynamoDB
   (`PAY_PER_REQUEST`), AppSync GraphQL, Lambda, Route 53. Region
   `eu-central-1`.
-- **Mobile:** Expo (Router, file-based), Tamagui, Reanimated; builds via
-  EAS. See [`docs/design-spec.md`](docs/design-spec.md) for the visual and
-  interaction language.
+- **Mobile:** Expo SDK 56 (Router, file-based routes), Tamagui,
+  Reanimated; Android builds via EAS (`eas.json` profiles per env).
 
 ## Environments
 
-| Env          | Account        | Region         | Deploy trigger                                           |
-| ------------ | -------------- | -------------- | -------------------------------------------------------- |
-| `sandbox`    | `219602461448` | `eu-central-1` | per PR (`pr{N}-smaran-sandbox-…`), torn down on PR close |
-| `staging`    | `139316820779` | `eu-central-1` | push to `main` (gated)                                   |
-| `production` | `916657620124` | `eu-central-1` | push to `main`, after staging (gated)                    |
+| Env          | Account        | Stack name (suffix)              | Deploy trigger                                   |
+| ------------ | -------------- | -------------------------------- | ------------------------------------------------ |
+| `sandbox`    | `219602461448` | `pr{N}-smaran-sandbox-…`         | PR (after CI passes); destroyed on PR close      |
+| `staging`    | `139316820779` | `smaran-staging-eu-central-1`    | push to `main` (GitHub environment gate)         |
+| `production` | `916657620124` | `smaran-production-eu-central-1` | push to `main`, after staging (environment gate) |
 
-AWS auth is OIDC-only (no long-lived keys): workflows assume the infra
-account's `ap-github-actions-cdk` role, and `cdk deploy` chain-assumes
-each target account's bootstrap roles. See
-[`docs/HANDOFF-v2.md`](docs/HANDOFF-v2.md).
+The **infra** account (`126606499529`) holds the only GitHub OIDC trust.
+Workflows assume `ap-github-actions-cdk` there; CDK chain-assumes each
+target account's `cdk-hnb659fds-*` bootstrap roles. Details in
+[`infra/README.md`](infra/README.md).
 
 ## CI/CD
 
-Caller workflows in [`.github/workflows/`](.github/workflows/README.md):
+Thin caller workflows in [`.github/workflows/`](.github/workflows/README.md)
+delegate to reusable workflows in
+[`ayush-porwal/actions`](https://github.com/ayush-porwal/actions). Callers
+pass monorepo paths (`install-directory: .`, `working-directory: infra`,
+`lockfile-path: package-lock.json`, `npm-workspace: smaran-infra`).
 
-- **PR** → monorepo lint/typecheck + infra build/test/synth (`ci`) + an
-  ephemeral `pr{N}` sandbox (`deploy-sandbox`)
-- **PR close** → sandbox teardown (`destroy-sandbox`)
-- **merge to `main`** → staging → production (`deploy`)
-- **on demand** → Android APK for any env (`build-apk`, `workflow_dispatch`)
+| Trigger        | Workflow               | What happens                                                                      |
+| -------------- | ---------------------- | --------------------------------------------------------------------------------- |
+| PR → `main`    | `ci.yaml`              | Path-filtered format + infra/mobile checks; sandbox diff+deploy if infra changed  |
+| PR closed      | `destroy-sandbox.yaml` | Tear down `pr{N}` sandbox stack                                                   |
+| Push to `main` | `deploy.yaml`          | Staging diff → deploy → prod diff → deploy (requires PR CI via branch protection) |
+| Manual         | `build-apk.yaml`       | Fetch stack outputs → EAS Android APK (`sandbox` / `staging` / `production`)      |
 
-Deploy workflows still delegate to reusable workflows in
-[`ayush-porwal/actions`](https://github.com/ayush-porwal/actions).
+**Branch protection:** enable required status checks on `main` before relying
+on the deploy pipeline — see [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md).
+
+Workflow refs currently pin `@feature/actions-improvements` until that
+[actions PR](https://github.com/ayush-porwal/actions/pull/1) merges; then
+pin to `@main` or a release tag.
 
 ## Docs
 
-- [`docs/design-spec.md`](docs/design-spec.md) — visual + interaction language
-- [`docs/HANDOFF.md`](docs/HANDOFF.md) — run the app, deploy, build an APK end-to-end
-- [`docs/HANDOFF-v2.md`](docs/HANDOFF-v2.md) — the IAM / OIDC deploy model
-- [`infra/README.md`](infra/README.md) — backend layout + local dev
-- [`.github/workflows/README.md`](.github/workflows/README.md) — CI/CD detail
+- [`infra/README.md`](infra/README.md) — backend layout, local dev, OIDC bootstrap
+- [`mobile/README.md`](mobile/README.md) — app dev, config, EAS builds
+- [`.github/workflows/README.md`](.github/workflows/README.md) — workflow reference
+- [`AGENTS.md`](AGENTS.md) — agent / contributor conventions

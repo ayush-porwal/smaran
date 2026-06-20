@@ -1,56 +1,116 @@
-# Welcome to your Expo app 👋
+# smaran mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo + Tamagui client for [smaran](https://github.com/ayush-porwal/smaran) — shared lists inside small groups.
+
+Part of the **npm-workspace monorepo**: install from the repo root, then use
+`--workspace=smaran` or run scripts from this directory after a root install.
+
+## Prerequisites
+
+- Node **24.x** (matches CI)
+- [Expo dev client](https://docs.expo.dev/develop/development-builds/introduction/) on a device or simulator (this app does not target Expo Go for production features)
+- For a real backend: a deployed stack + pulled config (below)
 
 ## Get started
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
 ```bash
-npm run reset-project
+# From repo root
+npm install
+npm run start --workspace=smaran
+
+# Or from mobile/
+cd mobile
+npm run start          # expo start --dev-client
+npm run android        # native run on Android
+npm run ios            # native run on iOS
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Local development uses `mobile/config/local.json` (placeholder Cognito/AppSync
+values). The active file is selected by `SMARAN_ENV` (see `src/lib/config.ts`).
 
-### Other setup steps
+## Backend config
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Runtime config is **not** committed for deployed envs. Pull it from a live
+CloudFormation stack:
+
+```bash
+cd mobile
+npm run config:pull -- --stack smaran-staging-eu-central-1 --env staging
+# → writes config/staging.json
+
+# Per-PR sandbox (while PR is open):
+npm run config:pull -- --stack pr4-smaran-sandbox-eu-central-1 --env sandbox
+```
+
+Then start with the matching env:
+
+```bash
+SMARAN_ENV=staging npm run start
+```
+
+| `SMARAN_ENV` | Config file           | Typical stack                       |
+| ------------ | --------------------- | ----------------------------------- |
+| `local`      | `config/local.json`   | n/a (LocalStack / placeholder)      |
+| `sandbox`    | `config/sandbox.json` | `pr{N}-smaran-sandbox-eu-central-1` |
+| `staging`    | `config/staging.json` | `smaran-staging-eu-central-1`       |
+| `prod`       | `config/prod.json`    | `smaran-production-eu-central-1`    |
+
+CI uses the same script in `build-apk.yaml`; env → stack mapping is in
+[`.github/deploy-envs.json`](../.github/deploy-envs.json).
+
+## Project layout
+
+```
+mobile/
+├── src/
+│   ├── app/              Expo Router routes (file-based)
+│   ├── components/       feature UI (modals, lists, …)
+│   ├── design-system/    Tamagui primitives, tokens, theme
+│   └── lib/              auth, GraphQL client, config loader
+├── config/               env JSON (local committed; others gitignored / CI-generated)
+├── scripts/
+│   └── pull-config.mjs   fetch Cognito/AppSync outputs from AWS
+├── eas.json              EAS build profiles (local, sandbox, staging, production)
+└── app.config.ts         Expo config
+```
+
+See [`AGENTS.md`](AGENTS.md) for Expo SDK 56 doc links and conventions.
+
+## Quality checks
+
+From repo root (preferred — matches CI):
+
+```bash
+npm run lint --workspace=smaran
+npm run typecheck --workspace=smaran
+npm run format:check    # whole repo
+```
+
+Pre-commit hooks (Husky + lint-staged) format and lint staged files.
+
+## EAS builds (Android APK)
+
+APKs are built **on demand** in GitHub Actions (`build-apk` workflow) to stay
+within EAS free-tier limits — not on every deploy.
+
+1. Actions → **build-apk** → Run workflow
+2. Choose `environment` (`sandbox` / `staging` / `production`)
+3. For sandbox, provide the open **PR number**
+4. Collect the build from [expo.dev → Builds](https://expo.dev) when finished
+   (workflow uses `--no-wait`)
+
+Local EAS (requires `EXPO_TOKEN`):
+
+```bash
+cd mobile
+eas build --platform android --profile staging --non-interactive
+```
+
+Monorepo note: CI sets `EAS_PROJECT_ROOT` to the repo root so workspace deps
+resolve from the root lockfile; `.easignore` keeps uploads lean.
 
 ## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo SDK 56 docs](https://docs.expo.dev/versions/v56.0.0/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [Tamagui](https://tamagui.dev/)

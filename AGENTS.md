@@ -24,10 +24,12 @@ and root `.prettierrc.json`. ESLint is pinned to v9 because
 
 ## CI/CD
 
-- Thin caller workflows in `.github/workflows/` (`ci`, `deploy-sandbox`,
-  `destroy-sandbox`, `deploy`) delegate to reusable workflows in
+- Thin caller workflows in `.github/workflows/` (`ci`, `destroy-sandbox`,
+  `deploy`, `build-apk`) delegate to reusable workflows in
   [`ayush-porwal/actions`](https://github.com/ayush-porwal/actions),
-  referenced as `ayush-porwal/actions/.github/workflows/<file>.yaml@main`.
+  referenced as `ayush-porwal/actions/.github/workflows/<file>.yaml@main`
+  (currently `@feature/actions-improvements` until
+  [actions PR #1](https://github.com/ayush-porwal/actions/pull/1) merges).
 - **Both repos must have compatible visibility**: a public repo can't
   call reusable workflows in a private repo. `smaran` and `actions` are
   both public — keep them that way, or reusable-workflow resolution
