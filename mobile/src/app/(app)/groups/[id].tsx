@@ -1,12 +1,7 @@
-import { useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  ArrowLeftIcon,
-  CaretRightIcon,
-  PlusIcon,
-  UserPlusIcon,
-} from "phosphor-react-native";
-import { ScrollView, YStack, View } from "tamagui";
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeftIcon, CaretRightIcon, PlusIcon, UserPlusIcon } from 'phosphor-react-native';
+import { ScrollView, YStack, View } from 'tamagui';
 
 import {
   AvatarStack,
@@ -20,8 +15,7 @@ import {
   Screen,
   Stack,
   Text,
-  useToast,
-} from "@/design-system";
+} from '@/design-system';
 import {
   ApiError,
   getGroup,
@@ -29,22 +23,21 @@ import {
   listGroupMembers,
   type GroupWithMeta,
   type List,
-} from "@/lib/api";
-import { useStoreVersion } from "@/lib/api/useStoreVersion";
-import { bumpVersion } from "@/lib/api/session";
-import { useCurrentUser } from "@/lib/api/useCurrentUser";
-import { CreateListModal } from "@/components/CreateListModal";
-import { InviteModal } from "@/components/InviteModal";
-import { MembersModal } from "@/components/MembersModal";
+} from '@/lib/api';
+import { useStoreVersion } from '@/lib/api/useStoreVersion';
+import { bumpVersion } from '@/lib/api/session';
+import { useCurrentUser } from '@/lib/api/useCurrentUser';
+import { CreateListModal } from '@/components/CreateListModal';
+import { InviteModal } from '@/components/InviteModal';
+import { MembersModal } from '@/components/MembersModal';
 
-const EMOJIS = ["🛒", "📋", "🧳", "🍽️", "📝", "📚", "🎬", "🎁", "✈️", "🍳"];
+const EMOJIS = ['🛒', '📋', '🧳', '🍽️', '📝', '📚', '🎬', '🎁', '✈️', '🍳'];
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const toast = useToast();
   const { user } = useCurrentUser();
-  const groupVersion = useStoreVersion(`group:${id ?? ""}`);
+  const groupVersion = useStoreVersion(`group:${id ?? ''}`);
 
   const [group, setGroup] = useState<GroupWithMeta | null>(null);
   const [lists, setLists] = useState<List[] | null>(null);
@@ -69,15 +62,13 @@ export default function GroupDetailScreen() {
         setMembers(
           m.map((mem) => ({
             id: mem.userId,
-            name: mem.user.name || mem.user.email || "Member",
+            name: mem.user.name || mem.user.email || 'Member',
           })),
         );
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(
-          err instanceof ApiError ? err.message : "Failed to load group",
-        );
+        setError(err instanceof ApiError ? err.message : 'Failed to load group');
       });
     return () => {
       cancelled = true;
@@ -111,7 +102,7 @@ export default function GroupDetailScreen() {
   }
 
   // Use backend role only — demoted creators must not see admin controls.
-  const isAdmin = group.role === "admin";
+  const isAdmin = group.role === 'admin';
 
   return (
     <Screen>
@@ -125,12 +116,7 @@ export default function GroupDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <Icon
-                icon={ArrowLeftIcon}
-                tone="textPrimary"
-                size={22}
-                weight="regular"
-              />
+              <Icon icon={ArrowLeftIcon} tone="textPrimary" size={22} weight="regular" />
             </View>
           </Pressable>
           <View width={40} height={40} />
@@ -153,7 +139,7 @@ export default function GroupDetailScreen() {
             <YStack flex={1}>
               <Heading level={1}>{group.name}</Heading>
               <Text variant="body.sm" color="$textSecondary" marginTop="$1">
-                {isAdmin ? "You administer this group" : "Joined as member"}
+                {isAdmin ? 'You administer this group' : 'Joined as member'}
               </Text>
             </YStack>
           </View>
@@ -169,39 +155,24 @@ export default function GroupDetailScreen() {
                 <Text variant="body.md" color="$textPrimary" fontWeight="500">
                   {members
                     .slice(0, 2)
-                    .map((m) => m.name.split(" ")[0])
-                    .join(", ")}
+                    .map((m) => m.name.split(' ')[0])
+                    .join(', ')}
                   {members.length > 2
-                    ? ` + ${members.length - 2} ${members.length - 2 === 1 ? "other" : "others"}`
-                    : ""}
+                    ? ` + ${members.length - 2} ${members.length - 2 === 1 ? 'other' : 'others'}`
+                    : ''}
                 </Text>
                 <Text variant="body.sm" color="$textTertiary">
-                  {group.memberCount}{" "}
-                  {group.memberCount === 1 ? "member" : "members"} in this group
+                  {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'} in this group
                 </Text>
               </YStack>
-              <Icon
-                icon={CaretRightIcon}
-                tone="textTertiary"
-                size={18}
-                weight="bold"
-              />
+              <Icon icon={CaretRightIcon} tone="textTertiary" size={18} weight="bold" />
             </Stack.Horizontal>
           </Pressable>
 
           {isAdmin ? (
             <Button fullWidth onPress={() => setInviteOpen(true)}>
-              <Stack.Horizontal
-                alignItems="center"
-                justifyContent="center"
-                gap="$2"
-              >
-                <Icon
-                  icon={UserPlusIcon}
-                  tone="onAccent"
-                  size={18}
-                  weight="bold"
-                />
+              <Stack.Horizontal alignItems="center" justifyContent="center" gap="$2">
+                <Icon icon={UserPlusIcon} tone="onAccent" size={18} weight="bold" />
                 <Text color="$onAccent" fontWeight="600" fontSize="$5">
                   Invite people
                 </Text>
@@ -212,14 +183,7 @@ export default function GroupDetailScreen() {
 
         {lists.length === 0 ? (
           <EmptyState
-            icon={
-              <Icon
-                icon={PlusIcon}
-                tone="textTertiary"
-                size={32}
-                weight="regular"
-              />
-            }
+            icon={<Icon icon={PlusIcon} tone="textTertiary" size={32} weight="regular" />}
             title="No lists yet"
             description="Make your first list in this group."
             actionLabel="New list"
@@ -247,7 +211,7 @@ export default function GroupDetailScreen() {
                   description={`Updated ${formatRelative(l.updatedAt)}`}
                   onPress={() =>
                     router.push({
-                      pathname: "/(app)/lists/[id]",
+                      pathname: '/(app)/lists/[id]',
                       params: { id: l.id },
                     } as never)
                   }
@@ -268,11 +232,7 @@ export default function GroupDetailScreen() {
           shadowOpacity={0.18}
           shadowRadius={10}
         >
-          <Pressable
-            onPress={() => setCreateOpen(true)}
-            accessibilityLabel="New list"
-            hitSlop={8}
-          >
+          <Pressable onPress={() => setCreateOpen(true)} accessibilityLabel="New list" hitSlop={8}>
             <View
               width={56}
               height={56}
@@ -295,7 +255,7 @@ export default function GroupDetailScreen() {
         onCreated={(listId) => {
           setCreateOpen(false);
           router.push({
-            pathname: "/(app)/lists/[id]",
+            pathname: '/(app)/lists/[id]',
             params: { id: listId },
           } as never);
         }}
@@ -313,12 +273,12 @@ export default function GroupDetailScreen() {
         onOpenChange={setMembersOpen}
         groupId={group.id}
         groupName={group.name}
-        currentUserId={user?.id ?? ""}
+        currentUserId={user?.id ?? ''}
         isAdmin={isAdmin}
         onMembersChanged={() => setReloadKey((k) => k + 1)}
         onLeftGroup={() => {
           // Home groups list won't refetch otherwise after leave/delete.
-          bumpVersion("group:any");
+          bumpVersion('group:any');
           router.back();
         }}
       />
@@ -333,7 +293,7 @@ function formatRelative(iso: string): string {
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (diff < minute) return "just now";
+  if (diff < minute) return 'just now';
   if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
   if (diff < day) return `${Math.floor(diff / hour)}h ago`;
   return `${Math.floor(diff / day)}d ago`;

@@ -23,7 +23,7 @@ jobs:
     uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@main
     with:
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'
 
   # --- staging ------------------------------------------------------
   diff_staging:
@@ -33,7 +33,7 @@ jobs:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-staging-eu-central-1
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'
 
   deploy_staging:
     needs: diff_staging
@@ -43,7 +43,7 @@ jobs:
       stack_name: smaran-staging-eu-central-1
       environment: staging
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'
 
   # --- prod (after staging deploys) ---------------------------------
   diff_prod:
@@ -53,7 +53,7 @@ jobs:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-production-eu-central-1
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'
 
   deploy_prod:
     needs: diff_prod
@@ -63,4 +63,4 @@ jobs:
       stack_name: smaran-production-eu-central-1
       environment: production
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'

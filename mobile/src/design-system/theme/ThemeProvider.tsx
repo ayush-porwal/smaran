@@ -71,13 +71,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function ThemedContent({
-  children,
-  hydrated,
-}: {
-  children: ReactNode;
-  hydrated: boolean;
-}) {
+function ThemedContent({ children, hydrated }: { children: ReactNode; hydrated: boolean }) {
   const resolved = useResolvedScheme();
   // Wait for AsyncStorage before first paint to avoid a theme flash.
   if (!hydrated) return null;

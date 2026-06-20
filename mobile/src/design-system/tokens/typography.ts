@@ -1,13 +1,13 @@
 // Use @tamagui/core platform flags — not react-native `Platform`. The Tamagui
 // babel plugin loads this config in Node (no RN runtime); importing
 // `react-native` here throws → "Missing themes" → compile-time styles disabled.
-import { createFont, isWeb, isIos } from "@tamagui/core";
+import { createFont, isWeb, isIos } from '@tamagui/core';
 
 const systemFamily = isWeb
   ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
   : isIos
-    ? "System"
-    : "sans-serif";
+    ? 'System'
+    : 'sans-serif';
 
 const fontConfig = {
   family: systemFamily,
@@ -42,15 +42,15 @@ const fontConfig = {
     13: 48,
   },
   weight: {
-    1: "400",
-    2: "400",
-    3: "400",
-    4: "500",
-    5: "500",
-    6: "600",
-    7: "600",
-    8: "700",
-    9: "700",
+    1: '400',
+    2: '400',
+    3: '400',
+    4: '500',
+    5: '500',
+    6: '600',
+    7: '600',
+    8: '700',
+    9: '700',
   },
   letterSpacing: {
     1: 0,
@@ -74,75 +74,75 @@ export const bodyFont = createFont(fontConfig);
 export const headingFont = bodyFont;
 
 export const textVariants = {
-  "display.lg": {
+  'display.lg': {
     fontSize: 13,
     lineHeight: 13,
-    fontWeight: "8" as const,
+    fontWeight: '8' as const,
     letterSpacing: -1.5,
   },
-  "display.md": {
+  'display.md': {
     fontSize: 11,
     lineHeight: 12,
-    fontWeight: "8" as const,
+    fontWeight: '8' as const,
     letterSpacing: -1,
   },
-  "display.sm": {
+  'display.sm': {
     fontSize: 9,
     lineHeight: 10,
-    fontWeight: "7" as const,
+    fontWeight: '7' as const,
     letterSpacing: -0.5,
   },
 
-  "heading.lg": {
+  'heading.lg': {
     fontSize: 9,
     lineHeight: 9,
-    fontWeight: "6" as const,
+    fontWeight: '6' as const,
     letterSpacing: -0.5,
   },
-  "heading.md": {
+  'heading.md': {
     fontSize: 8,
     lineHeight: 8,
-    fontWeight: "6" as const,
+    fontWeight: '6' as const,
     letterSpacing: -0.25,
   },
-  "heading.sm": {
+  'heading.sm': {
     fontSize: 6,
     lineHeight: 6,
-    fontWeight: "6" as const,
+    fontWeight: '6' as const,
     letterSpacing: 0,
   },
 
-  "body.lg": {
+  'body.lg': {
     fontSize: 6,
     lineHeight: 6,
-    fontWeight: "1" as const,
+    fontWeight: '1' as const,
     letterSpacing: 0,
   },
-  "body.md": {
+  'body.md': {
     fontSize: 4,
     lineHeight: 4,
-    fontWeight: "1" as const,
+    fontWeight: '1' as const,
     letterSpacing: 0,
   },
-  "body.sm": {
+  'body.sm': {
     fontSize: 2,
     lineHeight: 2,
-    fontWeight: "1" as const,
+    fontWeight: '1' as const,
     letterSpacing: 0.1,
   },
 
-  "label.md": {
+  'label.md': {
     fontSize: 2,
     lineHeight: 2,
-    fontWeight: "4" as const,
+    fontWeight: '4' as const,
     letterSpacing: 0.5,
   },
-  "label.sm": {
+  'label.sm': {
     fontSize: 1,
     lineHeight: 1,
-    fontWeight: "4" as const,
+    fontWeight: '4' as const,
     letterSpacing: 1,
-    textTransform: "uppercase" as const,
+    textTransform: 'uppercase' as const,
   },
 } as const;
 

@@ -1,20 +1,20 @@
 export enum Accounts {
-  SANDBOX = "219602461448",
-  STAGING = "139316820779",
-  PROD = "916657620124",
-  INFRA = "126606499529",
-  LOCAL = "000000000000",
+  SANDBOX = '219602461448',
+  STAGING = '139316820779',
+  PROD = '916657620124',
+  INFRA = '126606499529',
+  LOCAL = '000000000000',
 }
 
 export enum EnvCodes {
-  LOCAL = "local",
-  SANDBOX = "sandbox",
-  STAGING = "staging",
-  PROD = "prod",
+  LOCAL = 'local',
+  SANDBOX = 'sandbox',
+  STAGING = 'staging',
+  PROD = 'prod',
 }
 
 export enum Regions {
-  PRIMARY = "eu-central-1",
+  PRIMARY = 'eu-central-1',
 }
 
 /**
@@ -34,8 +34,8 @@ export const RETAIN_BY_ENV: Record<EnvCodes, boolean> = {
   [EnvCodes.PROD]: true,
 };
 
-export function retentionFor(envCode: EnvCodes): "destroy" | "retain" {
-  return RETAIN_BY_ENV[envCode] ? "retain" : "destroy";
+export function retentionFor(envCode: EnvCodes): 'destroy' | 'retain' {
+  return RETAIN_BY_ENV[envCode] ? 'retain' : 'destroy';
 }
 
 /**
@@ -44,10 +44,10 @@ export function retentionFor(envCode: EnvCodes): "destroy" | "retain" {
  * collide. See `bin/smaran.ts` for the PR prefix logic.
  */
 export const STACK_NAME_PREFIX_BY_ENV: Record<EnvCodes, string> = {
-  [EnvCodes.LOCAL]: "smaran-local",
-  [EnvCodes.SANDBOX]: "smaran-sandbox",
-  [EnvCodes.STAGING]: "smaran-staging",
-  [EnvCodes.PROD]: "smaran-production",
+  [EnvCodes.LOCAL]: 'smaran-local',
+  [EnvCodes.SANDBOX]: 'smaran-sandbox',
+  [EnvCodes.STAGING]: 'smaran-staging',
+  [EnvCodes.PROD]: 'smaran-production',
 };
 
 /**
@@ -56,10 +56,10 @@ export const STACK_NAME_PREFIX_BY_ENV: Record<EnvCodes, string> = {
  * a short env tag.
  */
 export const COGNITO_DOMAIN_PREFIX_BY_ENV: Record<EnvCodes, string> = {
-  [EnvCodes.LOCAL]: "smaran-local",
-  [EnvCodes.SANDBOX]: "smaran-sandbox",
-  [EnvCodes.STAGING]: "smaran-staging",
-  [EnvCodes.PROD]: "smaran-prod",
+  [EnvCodes.LOCAL]: 'smaran-local',
+  [EnvCodes.SANDBOX]: 'smaran-sandbox',
+  [EnvCodes.STAGING]: 'smaran-staging',
+  [EnvCodes.PROD]: 'smaran-prod',
 };
 
 /**
@@ -75,20 +75,20 @@ export type OAuthCallbackConfig = {
 
 export const OAUTH_CALLBACKS_BY_ENV: Record<EnvCodes, OAuthCallbackConfig> = {
   [EnvCodes.LOCAL]: {
-    callbackUrls: ["smaran://callback", "http://localhost:8081/auth/callback"],
-    signOutUrls: ["smaran://signout", "http://localhost:8081/auth/signout"],
+    callbackUrls: ['smaran://callback', 'http://localhost:8081/auth/callback'],
+    signOutUrls: ['smaran://signout', 'http://localhost:8081/auth/signout'],
   },
   [EnvCodes.SANDBOX]: {
-    callbackUrls: ["smaran://callback"],
-    signOutUrls: ["smaran://signout"],
+    callbackUrls: ['smaran://callback'],
+    signOutUrls: ['smaran://signout'],
   },
   [EnvCodes.STAGING]: {
-    callbackUrls: ["smaran://callback"],
-    signOutUrls: ["smaran://signout"],
+    callbackUrls: ['smaran://callback'],
+    signOutUrls: ['smaran://signout'],
   },
   [EnvCodes.PROD]: {
-    callbackUrls: ["smaran://callback"],
-    signOutUrls: ["smaran://signout"],
+    callbackUrls: ['smaran://callback'],
+    signOutUrls: ['smaran://signout'],
   },
 };
 
@@ -117,6 +117,6 @@ export function googleOAuthSecretName(envCode: EnvCodes): string {
  * Sandbox and staging keep the default `*.auth.{region}.amazoncognito.com`
  * Cognito hosted-UI domain — no custom DNS needed there.
  */
-export const CUSTOM_DOMAIN = "smaran.ayushporwal.com";
-export const CUSTOM_API_SUBDOMAIN = "api";
+export const CUSTOM_DOMAIN = 'smaran.ayushporwal.com';
+export const CUSTOM_API_SUBDOMAIN = 'api';
 export const CUSTOM_API_FQDN = `${CUSTOM_API_SUBDOMAIN}.${CUSTOM_DOMAIN}`;

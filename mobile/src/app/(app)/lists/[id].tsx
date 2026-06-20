@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeftIcon, PlusIcon, TrashIcon } from "phosphor-react-native";
-import { YStack, View, XStack } from "tamagui";
+import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeftIcon, PlusIcon, TrashIcon } from 'phosphor-react-native';
+import { YStack, View, XStack } from 'tamagui';
 
 import {
   Checkable,
@@ -14,7 +14,7 @@ import {
   Text,
   TextField,
   useToast,
-} from "@/design-system";
+} from '@/design-system';
 import {
   addItem,
   ApiError,
@@ -24,8 +24,8 @@ import {
   toggleItem,
   type List as ListModel,
   type ListItem as ListItemModel,
-} from "@/lib/api";
-import { useStoreVersion } from "@/lib/api/useStoreVersion";
+} from '@/lib/api';
+import { useStoreVersion } from '@/lib/api/useStoreVersion';
 
 type ItemRowProps = {
   item: ListItemModel;
@@ -39,11 +39,11 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
       onRightSwipe={
         item.checked
           ? undefined
-          : { label: "Done", tone: "accent", onAction: () => onToggle(item.id) }
+          : { label: 'Done', tone: 'accent', onAction: () => onToggle(item.id) }
       }
       onLeftSwipe={
         item.checked
-          ? { label: "Undo", tone: "muted", onAction: () => onToggle(item.id) }
+          ? { label: 'Undo', tone: 'muted', onAction: () => onToggle(item.id) }
           : undefined
       }
     >
@@ -63,9 +63,9 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
             width={22}
             height={22}
             borderRadius="$sm"
-            borderColor={item.checked ? "$accent" : "$borderStrong"}
+            borderColor={item.checked ? '$accent' : '$borderStrong'}
             borderWidth={1.5}
-            backgroundColor={item.checked ? "$accent" : "transparent"}
+            backgroundColor={item.checked ? '$accent' : 'transparent'}
             alignItems="center"
             justifyContent="center"
           >
@@ -88,12 +88,7 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
             hitSlop={8}
           >
             <View padding="$2">
-              <Icon
-                icon={TrashIcon}
-                tone="textTertiary"
-                size={18}
-                weight="regular"
-              />
+              <Icon icon={TrashIcon} tone="textTertiary" size={18} weight="regular" />
             </View>
           </Pressable>
         </XStack>
@@ -106,11 +101,11 @@ export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
-  const listVersion = useStoreVersion(`list:${id ?? ""}`);
+  const listVersion = useStoreVersion(`list:${id ?? ''}`);
 
   const [list, setList] = useState<ListModel | null>(null);
   const [items, setItems] = useState<ListItemModel[]>([]);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -125,8 +120,8 @@ export default function ListDetailScreen() {
       .catch((err) => {
         if (cancelled) return;
         toast.show({
-          kind: "error",
-          message: err instanceof ApiError ? err.message : "Failed",
+          kind: 'error',
+          message: err instanceof ApiError ? err.message : 'Failed',
         });
       });
     return () => {
@@ -143,11 +138,11 @@ export default function ListDetailScreen() {
       // it shows immediately instead of only after a remount.
       const created = await addItem({ listId: id, text: draft.trim() });
       setItems((prev) => [...prev, created]);
-      setDraft("");
+      setDraft('');
     } catch (err) {
       toast.show({
-        kind: "error",
-        message: err instanceof ApiError ? err.message : "Failed",
+        kind: 'error',
+        message: err instanceof ApiError ? err.message : 'Failed',
       });
     } finally {
       setSubmitting(false);
@@ -159,13 +154,11 @@ export default function ListDetailScreen() {
       if (!id) return;
       try {
         const updated = await toggleItem(id, itemId);
-        setItems((prev) =>
-          prev.map((i) => (i.id === updated.id ? updated : i)),
-        );
+        setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
       } catch (err) {
         toast.show({
-          kind: "error",
-          message: err instanceof ApiError ? err.message : "Failed",
+          kind: 'error',
+          message: err instanceof ApiError ? err.message : 'Failed',
         });
       }
     },
@@ -180,8 +173,8 @@ export default function ListDetailScreen() {
         setItems((prev) => prev.filter((i) => i.id !== itemId));
       } catch (err) {
         toast.show({
-          kind: "error",
-          message: err instanceof ApiError ? err.message : "Failed",
+          kind: 'error',
+          message: err instanceof ApiError ? err.message : 'Failed',
         });
       }
     },
@@ -222,12 +215,7 @@ export default function ListDetailScreen() {
               justifyContent="center"
               borderRadius="$full"
             >
-              <Icon
-                icon={ArrowLeftIcon}
-                tone="textPrimary"
-                size={22}
-                weight="regular"
-              />
+              <Icon icon={ArrowLeftIcon} tone="textPrimary" size={22} weight="regular" />
             </View>
           </Pressable>
           <Text variant="label.sm" color="$textTertiary">
@@ -259,12 +247,7 @@ export default function ListDetailScreen() {
         <Stack.Vertical flex={1} paddingHorizontal="$4" gap="$1">
           {items.length === 0 ? (
             <FadeIn>
-              <Text
-                variant="body.md"
-                color="$textTertiary"
-                textAlign="center"
-                paddingVertical="$8"
-              >
+              <Text variant="body.md" color="$textTertiary" textAlign="center" paddingVertical="$8">
                 Nothing here yet. Add the first item below.
               </Text>
             </FadeIn>
@@ -272,11 +255,7 @@ export default function ListDetailScreen() {
             <>
               {todoItems.map((item, idx) => (
                 <FadeIn key={item.id} delay={idx * 24}>
-                  <ItemRow
-                    item={item}
-                    onToggle={onToggle}
-                    onDelete={onDelete}
-                  />
+                  <ItemRow item={item} onToggle={onToggle} onDelete={onDelete} />
                 </FadeIn>
               ))}
 
@@ -289,11 +268,7 @@ export default function ListDetailScreen() {
                     marginBottom="$2"
                     paddingHorizontal="$2"
                   >
-                    <View
-                      flex={1}
-                      height={1}
-                      backgroundColor="$borderDefault"
-                    />
+                    <View flex={1} height={1} backgroundColor="$borderDefault" />
                     <Text
                       variant="label.sm"
                       color="$textTertiary"
@@ -302,22 +277,14 @@ export default function ListDetailScreen() {
                     >
                       Done · {doneItems.length}
                     </Text>
-                    <View
-                      flex={1}
-                      height={1}
-                      backgroundColor="$borderDefault"
-                    />
+                    <View flex={1} height={1} backgroundColor="$borderDefault" />
                   </XStack>
                 </FadeIn>
               ) : null}
 
               {doneItems.map((item, idx) => (
                 <FadeIn key={item.id} delay={idx * 24}>
-                  <ItemRow
-                    item={item}
-                    onToggle={onToggle}
-                    onDelete={onDelete}
-                  />
+                  <ItemRow item={item} onToggle={onToggle} onDelete={onDelete} />
                 </FadeIn>
               ))}
             </>
@@ -348,13 +315,13 @@ export default function ListDetailScreen() {
               width={48}
               height={48}
               borderRadius="$full"
-              backgroundColor={draft.trim() ? "$accent" : "$bgMuted"}
+              backgroundColor={draft.trim() ? '$accent' : '$bgMuted'}
               alignItems="center"
               justifyContent="center"
             >
               <Icon
                 icon={PlusIcon}
-                tone={draft.trim() ? "onAccent" : "textTertiary"}
+                tone={draft.trim() ? 'onAccent' : 'textTertiary'}
                 size={20}
                 weight="bold"
               />

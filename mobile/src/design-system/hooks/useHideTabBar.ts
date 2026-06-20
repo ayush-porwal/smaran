@@ -28,6 +28,6 @@ export function useHideTabBar() {
       return () => {
         nav.setOptions({ tabBarStyle: original });
       };
-    }, [navigation])
+    }, [navigation]),
   );
 }

@@ -72,9 +72,7 @@ export async function signIn(): Promise<AuthSession> {
   const { verifier, challenge } = await generatePkce();
   const state = bytesToBase64url(await Crypto.getRandomBytesAsync(16));
 
-  const authorizeUrl = new URL(
-    `https://${config.hostedUiDomain}/oauth2/authorize`,
-  );
+  const authorizeUrl = new URL(`https://${config.hostedUiDomain}/oauth2/authorize`);
   authorizeUrl.searchParams.set('client_id', config.userPoolClientId);
   authorizeUrl.searchParams.set('response_type', 'code');
   authorizeUrl.searchParams.set('scope', 'openid email profile');
@@ -84,10 +82,7 @@ export async function signIn(): Promise<AuthSession> {
   authorizeUrl.searchParams.set('state', state);
   authorizeUrl.searchParams.set('identity_provider', 'Google');
 
-  const result = await WebBrowser.openAuthSessionAsync(
-    authorizeUrl.toString(),
-    BROWSER_REDIRECT,
-  );
+  const result = await WebBrowser.openAuthSessionAsync(authorizeUrl.toString(), BROWSER_REDIRECT);
   if (result.type !== 'success' || !result.url) {
     throw new ApiError('unauthenticated', 'Sign-in cancelled');
   }
@@ -98,10 +93,7 @@ export async function signIn(): Promise<AuthSession> {
   const code = url.searchParams.get('code');
   const errParam = url.searchParams.get('error');
   if (errParam) {
-    throw new ApiError(
-      'unauthenticated',
-      url.searchParams.get('error_description') ?? errParam,
-    );
+    throw new ApiError('unauthenticated', url.searchParams.get('error_description') ?? errParam);
   }
   if (!code) {
     throw new ApiError('unauthenticated', 'missing authorization code');
@@ -113,10 +105,7 @@ export async function signIn(): Promise<AuthSession> {
   return tokensToSession(tokens);
 }
 
-async function exchangeCodeForTokens(
-  code: string,
-  verifier: string,
-): Promise<StoredTokens> {
+async function exchangeCodeForTokens(code: string, verifier: string): Promise<StoredTokens> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     client_id: config.userPoolClientId,

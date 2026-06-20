@@ -1,11 +1,11 @@
-version: "3.9"
+version: '3.9'
 
 services:
   localstack:
     container_name: smaran-localstack
     image: localstack/localstack:4
     ports:
-      - "4566:4566" # all-in-one edge port
+      - '4566:4566' # all-in-one edge port
     environment:
       # Default region for every AWS service LocalStack emulates.
       - DEFAULT_REGION=eu-central-1
@@ -16,5 +16,5 @@ services:
       - PERSISTENCE=1
       - DEBUG=0
     volumes:
-      - "./.localstack:/var/lib/localstack"
-      - "/var/run/docker.sock:/var/run/docker.sock"
+      - './.localstack:/var/lib/localstack'
+      - '/var/run/docker.sock:/var/run/docker.sock'

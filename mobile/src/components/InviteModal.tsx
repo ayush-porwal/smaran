@@ -1,11 +1,11 @@
 // Shareable link invite — no email delivery; recipients join via app/join.tsx.
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Share } from "react-native";
-import { View, YStack } from "tamagui";
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Share } from 'react-native';
+import { View, YStack } from 'tamagui';
 
-import { Button, Modal, Text } from "@/design-system";
-import { ApiError, createGroupInviteLink } from "@/lib/api";
-import { buildInviteUrl } from "@/lib/inviteLink";
+import { Button, Modal, Text } from '@/design-system';
+import { ApiError, createGroupInviteLink } from '@/lib/api';
+import { buildInviteUrl } from '@/lib/inviteLink';
 
 type InviteModalProps = {
   open: boolean;
@@ -15,20 +15,20 @@ type InviteModalProps = {
 };
 
 type LinkState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; url: string };
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; url: string };
 
 export function InviteModal({ open, onOpenChange, groupId, groupName }: InviteModalProps) {
-  const [state, setState] = useState<LinkState>({ status: "loading" });
+  const [state, setState] = useState<LinkState>({ status: 'loading' });
 
   const generate = useCallback(() => {
-    setState({ status: "loading" });
+    setState({ status: 'loading' });
     return createGroupInviteLink(groupId)
-      .then((l) => setState({ status: "ready", url: buildInviteUrl(l.groupId, l.token) }))
+      .then((l) => setState({ status: 'ready', url: buildInviteUrl(l.groupId, l.token) }))
       .catch((err) =>
         setState({
-          status: "error",
+          status: 'error',
           message: err instanceof ApiError ? err.message : "Couldn't create an invite link",
         }),
       );
@@ -38,15 +38,15 @@ export function InviteModal({ open, onOpenChange, groupId, groupName }: InviteMo
     if (!open) return;
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setState({ status: "loading" });
+    setState({ status: 'loading' });
     createGroupInviteLink(groupId)
       .then((l) => {
-        if (!cancelled) setState({ status: "ready", url: buildInviteUrl(l.groupId, l.token) });
+        if (!cancelled) setState({ status: 'ready', url: buildInviteUrl(l.groupId, l.token) });
       })
       .catch((err) => {
         if (cancelled) return;
         setState({
-          status: "error",
+          status: 'error',
           message: err instanceof ApiError ? err.message : "Couldn't create an invite link",
         });
       });
@@ -56,10 +56,11 @@ export function InviteModal({ open, onOpenChange, groupId, groupName }: InviteMo
   }, [open, groupId]);
 
   async function onShare() {
-    if (state.status !== "ready") return;
+    if (state.status !== 'ready') return;
     try {
       await Share.share({ message: `Join "${groupName}" on Smaran: ${state.url}` });
     } catch {
+      // User dismissed the native share sheet.
     }
   }
 
@@ -70,16 +71,16 @@ export function InviteModal({ open, onOpenChange, groupId, groupName }: InviteMo
       title="Invite to group"
       description="Anyone with this link can join. It works for 30 days."
       primaryAction={{
-        label: state.status === "loading" ? "Creating link…" : "Share link",
+        label: state.status === 'loading' ? 'Creating link…' : 'Share link',
         onPress: onShare,
-        loading: state.status === "loading",
+        loading: state.status === 'loading',
       }}
-      secondaryAction={{ label: "Done", onPress: () => onOpenChange(false) }}
+      secondaryAction={{ label: 'Done', onPress: () => onOpenChange(false) }}
     >
       <YStack gap="$3" minHeight={72} justifyContent="center">
-        {state.status === "loading" ? (
+        {state.status === 'loading' ? (
           <ActivityIndicator />
-        ) : state.status === "error" ? (
+        ) : state.status === 'error' ? (
           <YStack gap="$3">
             <Text variant="body.sm" color="$danger" textAlign="center">
               {state.message}

@@ -1,5 +1,8 @@
-import { ApiError, type AuthSession, type SignInInput, type SignUpInput } from './types';
-import type {
+import {
+  ApiError,
+  type AuthSession,
+  type SignInInput,
+  type SignUpInput,
   AddItemInput,
   CreateGroupInput,
   CreateListInput,
@@ -14,13 +17,15 @@ import type {
   User,
 } from './types';
 
-import { getIdToken, getCurrentUser as getCachedCurrentUser, signIn as cognitoSignIn, signOut as cognitoSignOut } from '../auth';
+import {
+  getIdToken,
+  getCurrentUser as getCachedCurrentUser,
+  signIn as cognitoSignIn,
+  signOut as cognitoSignOut,
+} from '../auth';
 import { config } from '../config';
 
-async function gql<T>(
-  query: string,
-  variables: Record<string, unknown> = {},
-): Promise<T> {
+async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
   if (!config.graphqlEndpoint) {
     throw new ApiError('network', 'GraphQL endpoint not configured');
   }
@@ -39,7 +44,7 @@ async function gql<T>(
   if (!res.ok) {
     throw new ApiError('network', `HTTP ${res.status}`);
   }
-  const json = (await res.json()) as { data?: T; errors?: Array<{ message: string }> };
+  const json = (await res.json()) as { data?: T; errors?: { message: string }[] };
   if (json.errors?.length) {
     throw new ApiError('network', json.errors.map((e) => e.message).join('; '));
   }
@@ -375,18 +380,15 @@ export async function getGroup(groupId: string): Promise<GroupWithMeta> {
 
 export async function listGroupMembers(
   groupId: string,
-): Promise<Array<GroupMembership & { user: User }>> {
-  const data = await gql<{ listGroupMembers: Array<GroupMembership & { user: User }> }>(
+): Promise<(GroupMembership & { user: User })[]> {
+  const data = await gql<{ listGroupMembers: (GroupMembership & { user: User })[] }>(
     Q_LIST_GROUP_MEMBERS,
     { groupId },
   );
   return data.listGroupMembers;
 }
 
-export async function inviteToGroup(
-  groupId: string,
-  email: string,
-): Promise<Invite> {
+export async function inviteToGroup(groupId: string, email: string): Promise<Invite> {
   const data = await gql<{ inviteToGroup: Invite }>(M_INVITE_TO_GROUP, { groupId, email });
   return data.inviteToGroup;
 }
@@ -419,10 +421,11 @@ export async function setMemberRole(
   userId: string,
   role: Role,
 ): Promise<GroupMembership & { user: User }> {
-  const data = await gql<{ setMemberRole: GroupMembership & { user: User } }>(
-    M_SET_MEMBER_ROLE,
-    { groupId, userId, role },
-  );
+  const data = await gql<{ setMemberRole: GroupMembership & { user: User } }>(M_SET_MEMBER_ROLE, {
+    groupId,
+    userId,
+    role,
+  });
   return data.setMemberRole;
 }
 

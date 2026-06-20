@@ -12,13 +12,7 @@ type EmptyStateProps = {
   onAction?: () => void;
 };
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  actionLabel,
-  onAction,
-}: EmptyStateProps) {
+export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
     <YStack flex={1} alignItems="center" justifyContent="center" gap="$3" paddingHorizontal="$6">
       {icon ? <YStack marginBottom="$2">{icon}</YStack> : null}

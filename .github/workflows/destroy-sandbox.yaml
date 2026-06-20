@@ -22,4 +22,4 @@ jobs:
       stack_prefix: pr${{ github.event.pull_request.number }}-
       environment: sandbox
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'

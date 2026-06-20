@@ -1,29 +1,34 @@
 import path from 'node:path';
 
-const relpaths = (files, workspace) =>
-  files.map((file) => path.relative(workspace, file)).join(' ');
+const shellQuote = (value) => `'${String(value).replace(/'/g, `'\\''`)}'`;
 
-// lint-staged runs at the repo root; ESLint must execute inside each workspace
-// so it resolves that package's eslint.config.js (and tsconfig paths).
 const eslintFix = (workspace, files) => {
-  const rel = relpaths(files, workspace);
-  if (!rel) {
+  const rel = files.map((file) => path.relative(workspace, file));
+  if (rel.length === 0) {
     return [];
   }
 
-  return [`bash -c 'cd ${workspace} && eslint --fix ${rel}'`];
+  const quoted = rel.map(shellQuote).join(' ');
+  return [`bash -c "cd ${shellQuote(workspace)} && eslint --fix ${quoted}"`];
+};
+
+const prettierWrite = (files) => {
+  if (files.length === 0) {
+    return [];
+  }
+
+  return [`prettier --write ${files.map(shellQuote).join(' ')}`];
 };
 
 /** @type {import('lint-staged').Configuration} */
 export default {
-  'mobile/**/*.{ts,tsx,js,jsx,json,md}': (files) => [
-    `prettier --write ${files.join(' ')}`,
+  'mobile/**/*.{ts,tsx,js,jsx}': (files) => [
+    ...prettierWrite(files),
     ...eslintFix('mobile', files),
   ],
-  'infra/**/*.{ts,js,json,md}': (files) => [
-    `prettier --write ${files.join(' ')}`,
-    ...eslintFix('infra', files),
-  ],
-  'packages/**/*.{js,json,md}': (files) => [`prettier --write ${files.join(' ')}`],
-  '*.{json,md,yaml,yml}': (files) => [`prettier --write ${files.join(' ')}`],
+  'mobile/**/*.{json,md}': prettierWrite,
+  'infra/**/*.{ts,js}': (files) => [...prettierWrite(files), ...eslintFix('infra', files)],
+  'infra/**/*.{json,md}': prettierWrite,
+  'packages/**/*.{js,json,md}': prettierWrite,
+  '*.{json,md,yaml,yml}': prettierWrite,
 };

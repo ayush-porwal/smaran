@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { Input, Label, YStack, View } from 'tamagui';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps } from 'react';
 
 import { Text } from './Text';
 
@@ -69,7 +69,7 @@ export const TextField = forwardRef<React.ElementRef<typeof Input>, TextFieldPro
         ) : null}
       </YStack>
     );
-  }
+  },
 );
 
 export type { TextFieldProps };

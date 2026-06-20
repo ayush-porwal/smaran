@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 
 import { Modal, Pressable, Stack, Text, TextField, useToast } from '@/design-system';
-import { ApiError, createList, getGroup } from '@/lib/api';
+import { ApiError, createList } from '@/lib/api';
 
 type CreateListModalProps = {
   open: boolean;
@@ -54,7 +54,11 @@ export function CreateListModal({
       onOpenChange={onOpenChange}
       title="New list"
       description="Lists are visible to everyone in the group."
-      primaryAction={{ label: submitting ? 'Creating…' : 'Create list', onPress: onSubmit, loading: submitting }}
+      primaryAction={{
+        label: submitting ? 'Creating…' : 'Create list',
+        onPress: onSubmit,
+        loading: submitting,
+      }}
       secondaryAction={{ label: 'Cancel', onPress: () => onOpenChange(false) }}
     >
       <YStack gap="$4">

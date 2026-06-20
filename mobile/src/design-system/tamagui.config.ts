@@ -1,11 +1,11 @@
 // Tamagui v2 nests color/space/size/radius under `tokens` (v1 used top-level keys).
-import { createTamagui } from "tamagui";
-import { config as defaultConfig } from "@tamagui/config";
+import { createTamagui } from 'tamagui';
+import { config as defaultConfig } from '@tamagui/config';
 
-import { bodyFont, headingFont, textVariants } from "./tokens/typography";
-import { space } from "./tokens/spacing";
-import { radius } from "./tokens/radii";
-import { group, indigo, neutral, semantic } from "./tokens/colors";
+import { bodyFont, headingFont, textVariants } from './tokens/typography';
+import { space } from './tokens/spacing';
+import { radius } from './tokens/radii';
+import { group, indigo, neutral, semantic } from './tokens/colors';
 
 // Custom theme keys sit alongside Tamagui's required `background` and `color`.
 const lightTheme = {
@@ -111,7 +111,7 @@ export const tamaguiConfig = createTamagui({
     md: { maxWidth: 768 },
     lg: { maxWidth: 1024 },
   },
-  defaultTheme: "light",
+  defaultTheme: 'light',
 });
 
 export default tamaguiConfig;

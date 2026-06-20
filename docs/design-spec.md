@@ -31,8 +31,8 @@ motion patterns and composite components Tamagui does not provide.
 We use a single saturated accent (`indigo.500`) for primary actions, active
 states, links, and brand moments. Neutrals carry 95% of the UI.
 
-| Token        | Light   | Dark    | Use                              |
-| ------------ | ------- | ------- | -------------------------------- |
+| Token        | Light     | Dark      | Use                              |
+| ------------ | --------- | --------- | -------------------------------- |
 | `indigo.50`  | `#EEF0FF` | `#1A1B3A` | Subtle backgrounds, hover states |
 | `indigo.100` | `#DCE0FF` | `#252754` | Tinted surfaces                  |
 | `indigo.200` | `#B8C0FF` | `#3A3D7A` | Pressed surfaces                 |
@@ -50,44 +50,44 @@ Pure neutral, no warm/cool tint. Numbers picked for AA contrast on background.
 
 **Light:**
 
-| Token             | Value     | Use                              |
-| ----------------- | --------- | -------------------------------- |
-| `bg.canvas`       | `#FAFAFA` | App background                   |
-| `bg.surface`      | `#FFFFFF` | Cards, sheets, inputs            |
-| `bg.subtle`       | `#F4F4F5` | Muted surface, hover             |
-| `bg.muted`        | `#E4E4E7` | Dividers, disabled bg            |
-| `border.default`  | `#E4E4E7` | Hairline borders                 |
-| `border.strong`   | `#D4D4D8` | Visible borders, focused inputs  |
-| `text.primary`    | `#0A0A0A` | Headings, primary content        |
-| `text.secondary`  | `#52525B` | Body, descriptions               |
-| `text.tertiary`   | `#A1A1AA` | Captions, placeholders           |
-| `text.inverse`    | `#FAFAFA` | Text on accent fill              |
+| Token            | Value     | Use                             |
+| ---------------- | --------- | ------------------------------- |
+| `bg.canvas`      | `#FAFAFA` | App background                  |
+| `bg.surface`     | `#FFFFFF` | Cards, sheets, inputs           |
+| `bg.subtle`      | `#F4F4F5` | Muted surface, hover            |
+| `bg.muted`       | `#E4E4E7` | Dividers, disabled bg           |
+| `border.default` | `#E4E4E7` | Hairline borders                |
+| `border.strong`  | `#D4D4D8` | Visible borders, focused inputs |
+| `text.primary`   | `#0A0A0A` | Headings, primary content       |
+| `text.secondary` | `#52525B` | Body, descriptions              |
+| `text.tertiary`  | `#A1A1AA` | Captions, placeholders          |
+| `text.inverse`   | `#FAFAFA` | Text on accent fill             |
 
 **Dark:**
 
-| Token             | Value     | Use                              |
-| ----------------- | --------- | -------------------------------- |
-| `bg.canvas`       | `#0A0A0A` | App background                   |
-| `bg.surface`      | `#131316` | Cards, sheets, inputs            |
-| `bg.subtle`       | `#1C1C20` | Muted surface, hover             |
-| `bg.muted`        | `#27272A` | Dividers, disabled bg            |
-| `border.default`  | `#27272A` | Hairline borders                 |
-| `border.strong`   | `#3F3F46` | Visible borders, focused inputs  |
-| `text.primary`    | `#FAFAFA` | Headings, primary content        |
-| `text.secondary`  | `#A1A1AA` | Body, descriptions               |
-| `text.tertiary`   | `#71717A` | Captions, placeholders           |
-| `text.inverse`    | `#0A0A0A` | Text on accent fill              |
+| Token            | Value     | Use                             |
+| ---------------- | --------- | ------------------------------- |
+| `bg.canvas`      | `#0A0A0A` | App background                  |
+| `bg.surface`     | `#131316` | Cards, sheets, inputs           |
+| `bg.subtle`      | `#1C1C20` | Muted surface, hover            |
+| `bg.muted`       | `#27272A` | Dividers, disabled bg           |
+| `border.default` | `#27272A` | Hairline borders                |
+| `border.strong`  | `#3F3F46` | Visible borders, focused inputs |
+| `text.primary`   | `#FAFAFA` | Headings, primary content       |
+| `text.secondary` | `#A1A1AA` | Body, descriptions              |
+| `text.tertiary`  | `#71717A` | Captions, placeholders          |
+| `text.inverse`   | `#0A0A0A` | Text on accent fill             |
 
 ### 3.3 Semantic
 
 Use sparingly. These signal state, not decoration.
 
-| Token      | Light   | Dark    | Use                              |
-| ---------- | ------- | ------- | -------------------------------- |
-| `success`  | `#16A34A` | `#22C55E` | Confirmed, completed, online   |
-| `warning`  | `#D97706` | `#F59E0B` | Pending, attention needed       |
-| `danger`   | `#DC2626` | `#EF4444` | Errors, destructive            |
-| `info`     | `#0284C7` | `#38BDF8` | Informational neutral state     |
+| Token     | Light     | Dark      | Use                          |
+| --------- | --------- | --------- | ---------------------------- |
+| `success` | `#16A34A` | `#22C55E` | Confirmed, completed, online |
+| `warning` | `#D97706` | `#F59E0B` | Pending, attention needed    |
+| `danger`  | `#DC2626` | `#EF4444` | Errors, destructive          |
+| `info`    | `#0284C7` | `#38BDF8` | Informational neutral state  |
 
 ## 4. Typography
 
@@ -105,19 +105,19 @@ when localization is added.
 Major-second ratio (1.125), tuned for mobile. Display sizes use tighter
 tracking; body sizes use looser.
 
-| Token         | Size | Line height | Weight | Letter spacing | Use                          |
-| ------------- | ---- | ----------- | ------ | -------------- | ---------------------------- |
-| `display.lg`  | 40   | 44          | 700    | -1.5%          | Hero, empty states           |
-| `display.md`  | 32   | 38          | 700    | -1%            | Page titles                  |
-| `heading.lg`  | 24   | 30          | 600    | -0.5%          | Section titles               |
-| `heading.md`  | 20   | 26          | 600    | -0.25%         | Card titles                  |
-| `heading.sm`  | 17   | 22          | 600    | 0              | List item titles             |
-| `body.lg`     | 17   | 26          | 400    | 0              | Primary body                 |
-| `body.md`     | 15   | 22          | 400    | 0              | Secondary body               |
-| `body.sm`     | 13   | 18          | 400    | 0.1%           | Captions, metadata           |
-| `label.md`    | 13   | 16          | 500    | 0.5%           | Button labels, tabs          |
-| `label.sm`    | 11   | 14          | 500    | 1%             | Badges, chips (uppercase)    |
-| `mono.md`     | 14   | 20          | 500    | 0              | Invite codes, IDs (Inter mono) |
+| Token        | Size | Line height | Weight | Letter spacing | Use                            |
+| ------------ | ---- | ----------- | ------ | -------------- | ------------------------------ |
+| `display.lg` | 40   | 44          | 700    | -1.5%          | Hero, empty states             |
+| `display.md` | 32   | 38          | 700    | -1%            | Page titles                    |
+| `heading.lg` | 24   | 30          | 600    | -0.5%          | Section titles                 |
+| `heading.md` | 20   | 26          | 600    | -0.25%         | Card titles                    |
+| `heading.sm` | 17   | 22          | 600    | 0              | List item titles               |
+| `body.lg`    | 17   | 26          | 400    | 0              | Primary body                   |
+| `body.md`    | 15   | 22          | 400    | 0              | Secondary body                 |
+| `body.sm`    | 13   | 18          | 400    | 0.1%           | Captions, metadata             |
+| `label.md`   | 13   | 16          | 500    | 0.5%           | Button labels, tabs            |
+| `label.sm`   | 11   | 14          | 500    | 1%             | Badges, chips (uppercase)      |
+| `mono.md`    | 14   | 20          | 500    | 0              | Invite codes, IDs (Inter mono) |
 
 ### 4.3 Numerals
 
@@ -128,47 +128,47 @@ digit width doesn't jitter as values change.
 
 4px base. Numeric tokens. Avoid magic numbers in components.
 
-| Token | px |
-| ----- | -- |
-| `0`   | 0  |
-| `1`   | 4  |
-| `2`   | 8  |
-| `3`   | 12 |
-| `4`   | 16 |
-| `5`   | 20 |
-| `6`   | 24 |
-| `8`   | 32 |
-| `10`  | 40 |
-| `12`  | 48 |
-| `16`  | 64 |
-| `20`  | 80 |
-| `24`  | 96 |
+| Token | px  |
+| ----- | --- |
+| `0`   | 0   |
+| `1`   | 4   |
+| `2`   | 8   |
+| `3`   | 12  |
+| `4`   | 16  |
+| `5`   | 20  |
+| `6`   | 24  |
+| `8`   | 32  |
+| `10`  | 40  |
+| `12`  | 48  |
+| `16`  | 64  |
+| `20`  | 80  |
+| `24`  | 96  |
 
 Layout rhythm: 16px screen padding, 12px between related items, 24px
 between sections.
 
 ## 6. Radii
 
-| Token | px  | Use                                |
-| ----- | --- | ---------------------------------- |
-| `sm`  | 6   | Inputs, checkboxes, small chips    |
-| `md`  | 10  | Buttons, list items                |
-| `lg`  | 14  | Cards                              |
-| `xl`  | 20  | Sheets, large modals               |
-| `2xl` | 28  | Hero cards, onboarding             |
-| `full`| 9999| Avatars, pills, circular buttons   |
+| Token  | px   | Use                              |
+| ------ | ---- | -------------------------------- |
+| `sm`   | 6    | Inputs, checkboxes, small chips  |
+| `md`   | 10   | Buttons, list items              |
+| `lg`   | 14   | Cards                            |
+| `xl`   | 20   | Sheets, large modals             |
+| `2xl`  | 28   | Hero cards, onboarding           |
+| `full` | 9999 | Avatars, pills, circular buttons |
 
 ## 7. Elevation
 
 Minimal. We rely more on borders than shadows for definition.
 
-| Token | Light                                           | Dark                          |
-| ----- | ----------------------------------------------- | ----------------------------- |
-| `0`   | none                                            | none                          |
-| `1`   | `0 1px 0 0 border.default` (1px hairline only)  | `0 0 0 1px border.default`    |
-| `2`   | `0 1px 2px rgba(0,0,0,0.04), 0 1px 0 border.default` | `0 0 0 1px border.strong` |
+| Token | Light                                                 | Dark                                                   |
+| ----- | ----------------------------------------------------- | ------------------------------------------------------ |
+| `0`   | none                                                  | none                                                   |
+| `1`   | `0 1px 0 0 border.default` (1px hairline only)        | `0 0 0 1px border.default`                             |
+| `2`   | `0 1px 2px rgba(0,0,0,0.04), 0 1px 0 border.default`  | `0 0 0 1px border.strong`                              |
 | `3`   | `0 4px 12px rgba(0,0,0,0.08), 0 1px 0 border.default` | `0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px border.default` |
-| `4`   | `0 12px 32px rgba(0,0,0,0.12)` (modals only)    | `0 16px 48px rgba(0,0,0,0.5)` |
+| `4`   | `0 12px 32px rgba(0,0,0,0.12)` (modals only)          | `0 16px 48px rgba(0,0,0,0.5)`                          |
 
 Rule: in dark mode, no shadows below `3`. Use border + slight surface lift.
 
@@ -183,13 +183,13 @@ export const springs = {
   // Default. Page transitions, fades, list mutations.
   standard: { damping: 20, stiffness: 200, mass: 1 },
   // Snappy. Press feedback, toggle on/off.
-  snappy:   { damping: 18, stiffness: 320, mass: 0.8 },
+  snappy: { damping: 18, stiffness: 320, mass: 0.8 },
   // Gentle. Modal/sheet entry.
-  gentle:   { damping: 26, stiffness: 160, mass: 1.2 },
+  gentle: { damping: 26, stiffness: 160, mass: 1.2 },
   // Bouncy. Success confirmations, check-off.
-  bouncy:   { damping: 12, stiffness: 180, mass: 0.9 },
+  bouncy: { damping: 12, stiffness: 180, mass: 0.9 },
   // Stiff. Drag release, snap-to-grid.
-  stiff:    { damping: 28, stiffness: 400, mass: 1 },
+  stiff: { damping: 28, stiffness: 400, mass: 1 },
 };
 ```
 
@@ -197,14 +197,14 @@ export const springs = {
 
 ```ts
 export const timings = {
-  micro:   120,  // hover, press
-  short:   200,  // fades, small transitions
-  medium:  320,  // modals, sheets
-  long:    480,  // page transitions, list staggers
+  micro: 120, // hover, press
+  short: 200, // fades, small transitions
+  medium: 320, // modals, sheets
+  long: 480, // page transitions, list staggers
 };
 
 export const easings = {
-  standard:   [0.2, 0, 0, 1],     // decelerate
+  standard: [0.2, 0, 0, 1], // decelerate
   accelerate: [0.3, 0, 1, 1],
   emphasized: [0.2, 0, 0, 1],
 };
@@ -434,14 +434,14 @@ stack is stood up in Phase 1, the swap from `lib/api/mock.ts` to
 
 ### 15.1 Services in scope
 
-| Service             | Why                                                              |
-| ------------------- | ---------------------------------------------------------------- |
-| **Cognito**         | User Pool for email/password auth, optional MFA                   |
-| **DynamoDB**        | Data store, 5 tables (see below), `PAY_PER_REQUEST` billing     |
-| **Lambda**          | Every read/write is a Lambda resolver; no direct DB access        |
-| **AppSync**         | GraphQL API + WebSocket subscriptions for real-time               |
-| **DynamoDB Streams**| Feeds AppSync subscriptions from item-level changes               |
-| **IAM**             | Roles + policies binding the above (CDK writes these for us)     |
+| Service              | Why                                                          |
+| -------------------- | ------------------------------------------------------------ |
+| **Cognito**          | User Pool for email/password auth, optional MFA              |
+| **DynamoDB**         | Data store, 5 tables (see below), `PAY_PER_REQUEST` billing  |
+| **Lambda**           | Every read/write is a Lambda resolver; no direct DB access   |
+| **AppSync**          | GraphQL API + WebSocket subscriptions for real-time          |
+| **DynamoDB Streams** | Feeds AppSync subscriptions from item-level changes          |
+| **IAM**              | Roles + policies binding the above (CDK writes these for us) |
 
 Later phases add: **SNS** (push notifications, Phase 4), **S3** (avatars,
 Phase 2+), **CloudFront** (when S3 traffic warrants it), **Cognito
@@ -449,13 +449,13 @@ Identity Pool** (only if we want direct S3 uploads from clients).
 
 ### 15.2 DynamoDB tables
 
-| Table              | PK          | SK          | GSIs                          | Notes                       |
-| ------------------ | ----------- | ----------- | ----------------------------- | --------------------------- |
-| `Groups`           | `groupId`   | -           | `byCreator` on `createdBy`    | name, emoji, color, createdAt |
-| `GroupMemberships` | `groupId`   | `userId`    | `byUser` on `userId`          | role, joinedAt              |
-| `Invites`          | `inviteId`  | -           | `byGroup`, `byEmail`          | status, expiresAt (TTL)     |
-| `Lists`            | `groupId`   | `listId`    | -                             | name, emoji, order          |
-| `ListItems`        | `listId`    | `itemId`    | -                             | text, checked, order        |
+| Table              | PK         | SK       | GSIs                       | Notes                         |
+| ------------------ | ---------- | -------- | -------------------------- | ----------------------------- |
+| `Groups`           | `groupId`  | -        | `byCreator` on `createdBy` | name, emoji, color, createdAt |
+| `GroupMemberships` | `groupId`  | `userId` | `byUser` on `userId`       | role, joinedAt                |
+| `Invites`          | `inviteId` | -        | `byGroup`, `byEmail`       | status, expiresAt (TTL)       |
+| `Lists`            | `groupId`  | `listId` | -                          | name, emoji, order            |
+| `ListItems`        | `listId`   | `itemId` | -                          | text, checked, order          |
 
 - All tables: `PAY_PER_REQUEST`, point-in-time recovery on, encryption with AWS-managed keys.
 - `Lists` and `ListItems` get `NEW_AND_OLD_IMAGES` streams so AppSync subscriptions can publish the new state.

@@ -21,12 +21,12 @@ infra/
 
 ## Envs
 
-| Env        | Account ID      | Region       | Retention | Deploy trigger                  |
-| ---------- | --------------- | ------------ | --------- | ------------------------------- |
-| `local`    | `000000000000`  | `eu-central-1` | n/a (LocalStack) | developer machine via `docker compose` + `npm run synth:local` |
-| `sandbox`  | `219602461448`  | `eu-central-1` | `DESTROY` | every PR (`pr{N}-smaran-sandbox-…`); destroyed on PR close |
-| `staging`  | `139316820779`  | `eu-central-1` | `DESTROY` | push to `main`                  |
-| `prod`     | `916657620124`  | `eu-central-1` | `RETAIN`  | `workflow_dispatch` only (manual gate) |
+| Env       | Account ID     | Region         | Retention        | Deploy trigger                                                 |
+| --------- | -------------- | -------------- | ---------------- | -------------------------------------------------------------- |
+| `local`   | `000000000000` | `eu-central-1` | n/a (LocalStack) | developer machine via `docker compose` + `npm run synth:local` |
+| `sandbox` | `219602461448` | `eu-central-1` | `DESTROY`        | every PR (`pr{N}-smaran-sandbox-…`); destroyed on PR close     |
+| `staging` | `139316820779` | `eu-central-1` | `DESTROY`        | push to `main`                                                 |
+| `prod`    | `916657620124` | `eu-central-1` | `RETAIN`         | `workflow_dispatch` only (manual gate)                         |
 
 `Infra` account (`126606499529`) hosts the **only** GitHub OIDC trust. Workflows assume `126606499529:ap-github-actions-cdk` once (hop 1, OIDC); `cdk deploy` then chain-assumes `cdk-hnb659fds-deploy-role-*` in each target account (hop 2, done by CDK itself). See [`docs/HANDOFF-v2.md` §4](../docs/HANDOFF-v2.md#4-migration-steps) for the full setup.
 
@@ -44,13 +44,13 @@ npm test                 # jest unit tests
 Thin caller workflows under `.github/workflows/` delegate to reusable
 workflows in [`ayush-porwal/actions`](https://github.com/ayush-porwal/actions):
 
-| File                     | Trigger                                | Env      |
-| ------------------------ | -------------------------------------- | -------- |
-| `ci.yaml`                | PR open / synchronise                  | n/a (no AWS) |
-| `deploy-sandbox.yaml`    | PR opened/synchronised/reopened        | sandbox  |
-| `destroy-sandbox.yaml`   | PR closed (merged or not)              | sandbox  |
-| `deploy.yaml`            | push to `main` (staging → prod)        | staging, production |
-| `build-apk.yaml`         | `workflow_dispatch` (env + PR number)  | sandbox / staging / production |
+| File                   | Trigger                               | Env                            |
+| ---------------------- | ------------------------------------- | ------------------------------ |
+| `ci.yaml`              | PR open / synchronise                 | n/a (no AWS)                   |
+| `deploy-sandbox.yaml`  | PR opened/synchronised/reopened       | sandbox                        |
+| `destroy-sandbox.yaml` | PR closed (merged or not)             | sandbox                        |
+| `deploy.yaml`          | push to `main` (staging → prod)       | staging, production            |
+| `build-apk.yaml`       | `workflow_dispatch` (env + PR number) | sandbox / staging / production |
 
 The deploy workflows are backend-only. Mobile config (Cognito/AppSync
 wiring) is fetched live from the deployed stack's CloudFormation outputs
@@ -69,16 +69,16 @@ The CDK code does not create IAM roles — the trust boundary lives in AWS, set 
 
 ## Phases
 
-| Phase | Status     | What                                       |
-| ----- | ---------- | ------------------------------------------ |
-| 1     | done       | Bootstrap, empty stack, LocalStack         |
-| 2     | done       | CI + sandbox/staging/prod deploy workflows |
-| 3     | done       | Cognito user pool + Google OAuth           |
-| 4     | done       | DynamoDB tables                            |
-| 5     | done       | AppSync + Lambda resolvers                 |
-| 6     | done       | Mobile auth wiring                         |
-| 7     | done       | Mobile data wiring                         |
-| 8     | done       | Cleanup — remove mock data, dead code      |
+| Phase | Status | What                                       |
+| ----- | ------ | ------------------------------------------ |
+| 1     | done   | Bootstrap, empty stack, LocalStack         |
+| 2     | done   | CI + sandbox/staging/prod deploy workflows |
+| 3     | done   | Cognito user pool + Google OAuth           |
+| 4     | done   | DynamoDB tables                            |
+| 5     | done   | AppSync + Lambda resolvers                 |
+| 6     | done   | Mobile auth wiring                         |
+| 7     | done   | Mobile data wiring                         |
+| 8     | done   | Cleanup — remove mock data, dead code      |
 
 ## Secrets + OAuth
 

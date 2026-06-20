@@ -33,7 +33,9 @@ const userId = (identity: any) =>
 
 // Invites are keyed by email (recipient may not have an account yet).
 const callerEmail = (identity: any): string =>
-  String(identity?.claims?.email || '').toLowerCase().trim();
+  String(identity?.claims?.email || '')
+    .toLowerCase()
+    .trim();
 
 // Denormalised onto membership rows at join time — no separate user directory.
 const callerName = (identity: any): string =>
@@ -282,11 +284,20 @@ const ops: Record<string, Op> = {
     );
     const out = [];
     for (const mem of m.Items || []) {
-      const g = await ddb.send(new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId: mem.groupId } }));
+      const g = await ddb.send(
+        new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId: mem.groupId } }),
+      );
       if (!g.Item) continue;
-      const memberCount = await countItems(MEMBERSHIPS_TABLE, 'groupId = :g', { ':g': mem.groupId });
+      const memberCount = await countItems(MEMBERSHIPS_TABLE, 'groupId = :g', {
+        ':g': mem.groupId,
+      });
       // LISTS_TABLE PK = listId; groupId is only reachable via ByGroup GSI.
-      const listCount = await countItems(LISTS_TABLE, 'groupId = :g', { ':g': mem.groupId }, 'ByGroup');
+      const listCount = await countItems(
+        LISTS_TABLE,
+        'groupId = :g',
+        { ':g': mem.groupId },
+        'ByGroup',
+      );
       out.push({ ...mapGroup(g.Item), role: mem.role, memberCount, listCount });
     }
     return out.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
@@ -297,7 +308,9 @@ const ops: Record<string, Op> = {
     await requireMember(groupId, sub);
     const g = await ddb.send(new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId } }));
     if (!g.Item) err('not_found', 'group');
-    const m = await ddb.send(new GetCommand({ TableName: MEMBERSHIPS_TABLE, Key: { groupId, userId: sub } }));
+    const m = await ddb.send(
+      new GetCommand({ TableName: MEMBERSHIPS_TABLE, Key: { groupId, userId: sub } }),
+    );
     const memberCount = await countItems(MEMBERSHIPS_TABLE, 'groupId = :g', { ':g': groupId });
     const listCount = await countItems(LISTS_TABLE, 'groupId = :g', { ':g': groupId }, 'ByGroup');
     return { ...mapGroup(g.Item), role: m.Item?.role || 'member', memberCount, listCount };
@@ -365,8 +378,7 @@ const ops: Record<string, Op> = {
     );
     const now = Date.now();
     const pending = (r.Items || []).filter(
-      (inv: any) =>
-        inv.status === 'pending' && new Date(inv.expiresAt).getTime() > now,
+      (inv: any) => inv.status === 'pending' && new Date(inv.expiresAt).getTime() > now,
     );
     const uid = userId(identity);
     const resolved = await Promise.all(
@@ -420,7 +432,9 @@ const ops: Record<string, Op> = {
   inviteToGroup: async (args, identity) => {
     const sub = userId(identity);
     const groupId = String(args.groupId);
-    const email = String(args.email || '').toLowerCase().trim();
+    const email = String(args.email || '')
+      .toLowerCase()
+      .trim();
     if (!email.includes('@')) err('validation', 'invalid email');
     await requireAdmin(groupId, sub);
     const now = Date.now();
@@ -433,9 +447,7 @@ const ops: Record<string, Op> = {
     );
     const live = (existing.Items || []).find(
       (inv: any) =>
-        inv.email === email &&
-        inv.status === 'pending' &&
-        new Date(inv.expiresAt).getTime() > now,
+        inv.email === email && inv.status === 'pending' && new Date(inv.expiresAt).getTime() > now,
     );
     if (live) return mapInvite(live);
     const inviteId = newId('invite');
@@ -519,7 +531,9 @@ const ops: Record<string, Op> = {
     const sub = userId(identity);
     const input = args.input;
     if (!input.text?.trim()) err('validation', 'text is required');
-    const l = await ddb.send(new GetCommand({ TableName: LISTS_TABLE, Key: { listId: input.listId } }));
+    const l = await ddb.send(
+      new GetCommand({ TableName: LISTS_TABLE, Key: { listId: input.listId } }),
+    );
     if (!l.Item) err('not_found', 'list');
     await requireMember(l.Item.groupId, sub);
     const r = await ddb.send(
@@ -609,13 +623,10 @@ const ops: Record<string, Op> = {
     const invite = (r.Items || []).find((inv: any) => inv.inviteId === inviteId);
     if (!invite) err('not_found', 'invite not found');
     if (invite.status !== 'pending') err('conflict', 'invite is no longer pending');
-    if (new Date(invite.expiresAt).getTime() <= Date.now())
-      err('conflict', 'invite has expired');
+    if (new Date(invite.expiresAt).getTime() <= Date.now()) err('conflict', 'invite has expired');
 
     const groupId = invite.groupId;
-    const g = await ddb.send(
-      new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId } }),
-    );
+    const g = await ddb.send(new GetCommand({ TableName: GROUPS_TABLE, Key: { groupId } }));
     if (!g.Item) err('not_found', 'group no longer exists');
 
     const ts = nowIso();
@@ -694,15 +705,14 @@ const ops: Record<string, Op> = {
     const isLastAdmin =
       mine.role === 'admin' && members.filter((m) => m.role === 'admin').length <= 1;
     if (isLastAdmin && members.length > 1)
-      err(
-        'conflict',
-        'promote another member to admin (or delete the group) before leaving',
-      );
+      err('conflict', 'promote another member to admin (or delete the group) before leaving');
     if (isLastAdmin) {
       await deleteGroupCascade(groupId);
       return true;
     }
-    await ddb.send(new DeleteCommand({ TableName: MEMBERSHIPS_TABLE, Key: { groupId, userId: sub } }));
+    await ddb.send(
+      new DeleteCommand({ TableName: MEMBERSHIPS_TABLE, Key: { groupId, userId: sub } }),
+    );
     await touchGroup(groupId);
     return true;
   },
@@ -727,9 +737,7 @@ const ops: Record<string, Op> = {
     );
     const live = (existing.Items || []).find(
       (inv: any) =>
-        inv.kind === 'link' &&
-        inv.status === 'active' &&
-        new Date(inv.expiresAt).getTime() > now,
+        inv.kind === 'link' && inv.status === 'active' && new Date(inv.expiresAt).getTime() > now,
     );
     if (live) return mapInviteLink(live);
     const token = 'lnk_' + randomUUID().replace(/-/g, '');

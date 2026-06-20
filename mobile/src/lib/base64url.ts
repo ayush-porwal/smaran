@@ -9,10 +9,7 @@ export function bytesToBase64url(bytes: Uint8Array): string {
   let binary = '';
   const CHUNK = 0x8000;
   for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode.apply(
-      null,
-      Array.from(bytes.subarray(i, i + CHUNK)) as number[],
-    );
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)) as number[]);
   }
   let out = '';
   for (let i = 0; i < binary.length; i += 3) {

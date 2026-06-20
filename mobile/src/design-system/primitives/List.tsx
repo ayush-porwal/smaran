@@ -26,7 +26,10 @@ export function List<T>({
       <FlashList
         data={data as T[]}
         renderItem={renderItem}
-        keyExtractor={keyExtractor ?? ((item: T, index: number) => (item as { id?: string }).id ?? String(index))}
+        keyExtractor={
+          keyExtractor ??
+          ((item: T, index: number) => (item as { id?: string }).id ?? String(index))
+        }
         ItemSeparatorComponent={() => <Separator borderColor="$borderDefault" borderWidth={0.5} />}
         contentContainerStyle={contentContainerStyle}
       />

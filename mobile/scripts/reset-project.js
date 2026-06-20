@@ -5,14 +5,14 @@
  * Safe to delete after running once.
  */
 
-const fs = require("fs");
-const path = require("path");
-const readline = require("readline");
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
 
 const root = process.cwd();
-const oldDirs = ["src", "scripts"];
-const exampleDir = "example";
-const newAppDir = "src/app";
+const oldDirs = ['src', 'scripts'];
+const exampleDir = 'example';
+const newAppDir = 'src/app';
 const exampleDirPath = path.join(root, exampleDir);
 
 const indexContent = `import { Text, View, StyleSheet } from "react-native";
@@ -48,7 +48,7 @@ const rl = readline.createInterface({
 
 const moveDirectories = async (userInput) => {
   try {
-    if (userInput === "y") {
+    if (userInput === 'y') {
       await fs.promises.mkdir(exampleDirPath, { recursive: true });
       console.log(`📁 /${exampleDir} directory created.`);
     }
@@ -56,7 +56,7 @@ const moveDirectories = async (userInput) => {
     for (const dir of oldDirs) {
       const oldDirPath = path.join(root, dir);
       if (fs.existsSync(oldDirPath)) {
-        if (userInput === "y") {
+        if (userInput === 'y') {
           const newDirPath = path.join(root, exampleDir, dir);
           await fs.promises.rename(oldDirPath, newDirPath);
           console.log(`➡️ /${dir} moved to /${exampleDir}/${dir}.`);
@@ -71,23 +71,23 @@ const moveDirectories = async (userInput) => {
 
     const newAppDirPath = path.join(root, newAppDir);
     await fs.promises.mkdir(newAppDirPath, { recursive: true });
-    console.log("\n📁 New /src/app directory created.");
+    console.log('\n📁 New /src/app directory created.');
 
-    const indexPath = path.join(newAppDirPath, "index.tsx");
+    const indexPath = path.join(newAppDirPath, 'index.tsx');
     await fs.promises.writeFile(indexPath, indexContent);
-    console.log("📄 src/app/index.tsx created.");
+    console.log('📄 src/app/index.tsx created.');
 
-    const layoutPath = path.join(newAppDirPath, "_layout.tsx");
+    const layoutPath = path.join(newAppDirPath, '_layout.tsx');
     await fs.promises.writeFile(layoutPath, layoutContent);
-    console.log("📄 src/app/_layout.tsx created.");
+    console.log('📄 src/app/_layout.tsx created.');
 
-    console.log("\n✅ Project reset complete. Next steps:");
+    console.log('\n✅ Project reset complete. Next steps:');
     console.log(
       `1. Run \`npx expo start\` to start a development server.\n2. Edit src/app/index.tsx to edit the main screen.\n3. Put all your application code in /src, only screens and layout files should be in /src/app.${
-        userInput === "y"
+        userInput === 'y'
           ? `\n4. Delete the /${exampleDir} directory when you're done referencing it.`
-          : ""
-      }`
+          : ''
+      }`,
     );
   } catch (error) {
     console.error(`❌ Error during script execution: ${error.message}`);
@@ -95,14 +95,14 @@ const moveDirectories = async (userInput) => {
 };
 
 rl.question(
-  "Do you want to move existing files to /example instead of deleting them? (Y/n): ",
+  'Do you want to move existing files to /example instead of deleting them? (Y/n): ',
   (answer) => {
-    const userInput = answer.trim().toLowerCase() || "y";
-    if (userInput === "y" || userInput === "n") {
+    const userInput = answer.trim().toLowerCase() || 'y';
+    if (userInput === 'y' || userInput === 'n') {
       moveDirectories(userInput).finally(() => rl.close());
     } else {
       console.log("❌ Invalid input. Please enter 'Y' or 'N'.");
       rl.close();
     }
-  }
+  },
 );

@@ -29,7 +29,7 @@ jobs:
       stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
       stack_prefix: pr${{ github.event.pull_request.number }}-
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'
 
   deploy_sandbox:
     needs: diff_sandbox
@@ -40,4 +40,4 @@ jobs:
       stack_prefix: pr${{ github.event.pull_request.number }}-
       environment: sandbox
       working-directory: infra
-      node-version: "24.x"
+      node-version: '24.x'

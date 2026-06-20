@@ -1,8 +1,8 @@
 /// <reference types="node" />
 // `SMARAN_ENV` picks config/{env}.json (from pull-config or CI). Unset → local.json (empty → sign-in config error).
-import { readFileSync } from "fs";
-import { join } from "path";
-import type { ConfigContext, ExpoConfig } from "expo/config";
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 type EnvConfig = {
   envCode: string;
@@ -13,9 +13,9 @@ type EnvConfig = {
 };
 
 function loadEnv(): EnvConfig {
-  const env = process.env.SMARAN_ENV ?? "local";
-  const file = join(process.cwd(), "config", `${env}.json`);
-  return JSON.parse(readFileSync(file, "utf8")) as EnvConfig;
+  const env = process.env.SMARAN_ENV ?? 'local';
+  const file = join(process.cwd(), 'config', `${env}.json`);
+  return JSON.parse(readFileSync(file, 'utf8')) as EnvConfig;
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: `Smaran (${cfg.envCode})`,
-    slug: config.slug ?? "smaran",
+    slug: config.slug ?? 'smaran',
     extra: {
       ...(config.extra ?? {}),
       envCode: cfg.envCode,

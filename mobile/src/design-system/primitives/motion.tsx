@@ -1,6 +1,6 @@
 // Tamagui enterStyle/exitStyle only run on mount/unmount — Reanimated handles press/reorder feedback.
 import { useEffect } from 'react';
-import { type ViewStyle } from 'react-native';
+import { type ViewStyle, type TextStyle } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,10 +8,10 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
- useReducedMotion } from 'react-native-reanimated';
+  useReducedMotion,
+} from 'react-native-reanimated';
 
 import { springs, timings, easings } from '../tokens/motion';
-import { type TextStyle } from 'react-native';
 import { useTheme } from 'tamagui';
 import { Text } from './Text';
 import { type TextProps } from './Text';
@@ -70,18 +70,14 @@ export function PressableScale({
     <Animated.View
       onTouchStart={() => {
         if (reduced) return;
-        // SharedValue.value is mutated on the UI thread — eslint immutability rule is too strict here.
-        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(pressedScale, SPRING_OPTS);
       }}
       onTouchEnd={() => {
         if (reduced) return;
-        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(1, SPRING_OPTS);
       }}
       onTouchCancel={() => {
         if (reduced) return;
-        // eslint-disable-next-line react-hooks/immutability
         scale.value = withSpring(1, SPRING_OPTS);
       }}
       style={[style, animatedStyle]}
@@ -121,8 +117,7 @@ export function Checkable({
   const reduced = useReducedMotion();
   const theme = useTheme();
   const strikeColor = (theme.textPrimary as { val: string } | string) ?? '#000';
-  const strikeHex =
-    typeof strikeColor === 'string' ? strikeColor : strikeColor.val;
+  const strikeHex = typeof strikeColor === 'string' ? strikeColor : strikeColor.val;
   // onTextLayout reports line width, not container width — works when parent has flex={1}.
   const textWidth = useSharedValue(0);
   const strikeWidth = useSharedValue(checked ? 1 : 0);
@@ -158,11 +153,7 @@ export function Checkable({
 
   return (
     <Animated.View style={textAnimatedStyle}>
-      <Text
-        variant="body.md"
-        style={style as TextProps['style']}
-        {...({ onTextLayout } as object)}
-      >
+      <Text variant="body.md" style={style as TextProps['style']} {...({ onTextLayout } as object)}>
         {children}
       </Text>
       <Animated.View

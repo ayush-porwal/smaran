@@ -1,13 +1,8 @@
 #!/usr/bin/env node
-import * as cdk from "aws-cdk-lib/core";
+import * as cdk from 'aws-cdk-lib/core';
 
-import {
-  Accounts,
-  EnvCodes,
-  Regions,
-  STACK_NAME_PREFIX_BY_ENV,
-} from "../lib/constants";
-import { SmaranStack } from "../lib/stacks/smaran-stack";
+import { Accounts, EnvCodes, Regions, STACK_NAME_PREFIX_BY_ENV } from '../lib/constants';
+import { SmaranStack } from '../lib/stacks/smaran-stack';
 
 const app = new cdk.App();
 
@@ -45,7 +40,7 @@ makeStack(
 // Do NOT add another dash here — that produced `pr3--smaran-sandbox-…`
 // and broke `cdk diff`/`cdk destroy` from the workflows.
 {
-  const prPrefix = process.env["CDK_STACK_PREFIX"];
+  const prPrefix = process.env['CDK_STACK_PREFIX'];
   const sandboxNamePrefix = prPrefix
     ? `${prPrefix}${STACK_NAME_PREFIX_BY_ENV[EnvCodes.SANDBOX]}`
     : STACK_NAME_PREFIX_BY_ENV[EnvCodes.SANDBOX];

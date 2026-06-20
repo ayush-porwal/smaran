@@ -1,26 +1,26 @@
-import * as cdk from "aws-cdk-lib/core";
-import { Template } from "aws-cdk-lib/assertions";
+import * as cdk from 'aws-cdk-lib/core';
+import { Template } from 'aws-cdk-lib/assertions';
 
-import { EnvCodes, Regions, STACK_NAME_PREFIX_BY_ENV } from "../lib/constants";
-import { SmaranStack } from "../lib/stacks/smaran-stack";
+import { EnvCodes, Regions, STACK_NAME_PREFIX_BY_ENV } from '../lib/constants';
+import { SmaranStack } from '../lib/stacks/smaran-stack';
 
-describe("SmaranStack", () => {
-  it("synthesises a stack with Cognito (Phase 3) and DynamoDB (Phase 4)", () => {
+describe('SmaranStack', () => {
+  it('synthesises a stack with Cognito (Phase 3) and DynamoDB (Phase 4)', () => {
     const app = new cdk.App();
-    const stack = new SmaranStack(app, "test-stack", {
-      env: { account: "111111111111", region: Regions.PRIMARY },
+    const stack = new SmaranStack(app, 'test-stack', {
+      env: { account: '111111111111', region: Regions.PRIMARY },
       envCode: EnvCodes.SANDBOX,
       resourcePrefix: STACK_NAME_PREFIX_BY_ENV[EnvCodes.SANDBOX],
     });
     const template = Template.fromStack(stack);
 
-    template.resourceCountIs("AWS::Cognito::UserPool", 1);
-    template.resourceCountIs("AWS::Cognito::UserPoolClient", 1);
-    template.resourceCountIs("AWS::Cognito::UserPoolDomain", 1);
+    template.resourceCountIs('AWS::Cognito::UserPool', 1);
+    template.resourceCountIs('AWS::Cognito::UserPoolClient', 1);
+    template.resourceCountIs('AWS::Cognito::UserPoolDomain', 1);
 
-    template.resourceCountIs("AWS::DynamoDB::Table", 5);
+    template.resourceCountIs('AWS::DynamoDB::Table', 5);
 
-    template.resourceCountIs("AWS::AppSync::GraphQLApi", 1);
-    template.resourceCountIs("AWS::Lambda::Function", 1);
+    template.resourceCountIs('AWS::AppSync::GraphQLApi', 1);
+    template.resourceCountIs('AWS::Lambda::Function', 1);
   });
 });

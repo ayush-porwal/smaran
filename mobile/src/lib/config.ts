@@ -25,7 +25,5 @@ function read(): EnvConfig {
 export const config: EnvConfig = read();
 
 export function isConfigured(): boolean {
-  return Boolean(
-    config.userPoolId && config.userPoolClientId && config.hostedUiDomain,
-  );
+  return Boolean(config.userPoolId && config.userPoolClientId && config.hostedUiDomain);
 }

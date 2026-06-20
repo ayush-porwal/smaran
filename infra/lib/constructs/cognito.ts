@@ -1,7 +1,7 @@
-import * as cdk from "aws-cdk-lib/core";
-import * as cognito from "aws-cdk-lib/aws-cognito";
-import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import { Construct } from "constructs";
+import * as cdk from 'aws-cdk-lib/core';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { Construct } from 'constructs';
 
 import {
   COGNITO_DOMAIN_PREFIX_BY_ENV,
@@ -9,7 +9,7 @@ import {
   OAUTH_CALLBACKS_BY_ENV,
   Regions,
   retentionFor,
-} from "../constants";
+} from '../constants';
 
 export interface CognitoConstructProps {
   envCode: EnvCodes;
@@ -34,7 +34,7 @@ export class CognitoConstruct extends Construct {
     const retention = retentionFor(envCode);
     const callbacks = OAUTH_CALLBACKS_BY_ENV[envCode];
 
-    this.userPool = new cognito.UserPool(this, "UserPool", {
+    this.userPool = new cognito.UserPool(this, 'UserPool', {
       userPoolName: `${resourcePrefix}-user-pool`,
       signInAliases: { email: true },
       selfSignUpEnabled: false,
@@ -48,10 +48,7 @@ export class CognitoConstruct extends Construct {
       },
       mfa: cognito.Mfa.OFF,
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      removalPolicy:
-        retention === "retain"
-          ? cdk.RemovalPolicy.RETAIN
-          : cdk.RemovalPolicy.DESTROY,
+      removalPolicy: retention === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       // Cognito user pools don't support autoDeleteObjects (that's an
       // S3 thing), so removalPolicy is the only retention knob.
       deletionProtection: envCode === EnvCodes.PROD,
@@ -70,31 +67,29 @@ export class CognitoConstruct extends Construct {
     // reference. `.unsafeUnwrap()` strips the SecretValue wrapper
     // while preserving the underlying token — the template still
     // contains `{{resolve:secretsmanager:...}}`, never plaintext.
-    const google = new cognito.UserPoolIdentityProviderGoogle(this, "Google", {
+    const google = new cognito.UserPoolIdentityProviderGoogle(this, 'Google', {
       userPool: this.userPool,
-      clientId: googleOAuthSecret
-        .secretValueFromJson("clientId")
-        .unsafeUnwrap(),
-      clientSecretValue: googleOAuthSecret.secretValueFromJson("clientSecret"),
-      scopes: ["openid", "email", "profile"],
+      clientId: googleOAuthSecret.secretValueFromJson('clientId').unsafeUnwrap(),
+      clientSecretValue: googleOAuthSecret.secretValueFromJson('clientSecret'),
+      scopes: ['openid', 'email', 'profile'],
       attributeMapping: {
-        email: { attributeName: "email" },
-        givenName: { attributeName: "given_name" },
-        familyName: { attributeName: "family_name" },
-        fullname: { attributeName: "name" },
-        profilePicture: { attributeName: "picture" },
+        email: { attributeName: 'email' },
+        givenName: { attributeName: 'given_name' },
+        familyName: { attributeName: 'family_name' },
+        fullname: { attributeName: 'name' },
+        profilePicture: { attributeName: 'picture' },
       },
     });
 
     // Domain prefix must be globally unique within the region. Parallel
     // PR sandboxes that collide fail fast — bump the PR prefix and retry.
-    this.userPoolDomain = this.userPool.addDomain("Domain", {
+    this.userPoolDomain = this.userPool.addDomain('Domain', {
       cognitoDomain: {
         domainPrefix: COGNITO_DOMAIN_PREFIX_BY_ENV[envCode],
       },
     });
 
-    this.userPoolClient = this.userPool.addClient("WebClient", {
+    this.userPoolClient = this.userPool.addClient('WebClient', {
       userPoolClientName: `${resourcePrefix}-web-client`,
       // Public client: authorization-code flow with PKCE (no secret).
       generateSecret: false,
@@ -108,11 +103,7 @@ export class CognitoConstruct extends Construct {
           authorizationCodeGrant: true,
           implicitCodeGrant: false,
         },
-        scopes: [
-          cognito.OAuthScope.OPENID,
-          cognito.OAuthScope.EMAIL,
-          cognito.OAuthScope.PROFILE,
-        ],
+        scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],
         callbackUrls: callbacks.callbackUrls,
         logoutUrls: callbacks.signOutUrls,
       },
@@ -120,9 +111,7 @@ export class CognitoConstruct extends Construct {
       accessTokenValidity: cdk.Duration.hours(1),
       refreshTokenValidity: cdk.Duration.days(30),
       enableTokenRevocation: true,
-      supportedIdentityProviders: [
-        cognito.UserPoolClientIdentityProvider.GOOGLE,
-      ],
+      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.GOOGLE],
     });
 
     // Deterministic deploy order on a fresh stack.

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
-import { PlusIcon } from "phosphor-react-native";
-import { YStack, View } from "tamagui";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { PlusIcon } from 'phosphor-react-native';
+import { YStack, View } from 'tamagui';
 
 import {
   EmptyState,
@@ -13,23 +13,21 @@ import {
   Screen,
   Stack,
   Text,
-  useToast,
-} from "@/design-system";
-import { listMyGroups, type GroupWithMeta, ApiError } from "@/lib/api";
-import { useStoreVersion } from "@/lib/api/useStoreVersion";
-import { useCurrentUser } from "@/lib/api/useCurrentUser";
-import { CreateGroupModal } from "@/components/CreateGroupModal";
-import { PendingInvites } from "@/components/PendingInvites";
+} from '@/design-system';
+import { listMyGroups, type GroupWithMeta, ApiError } from '@/lib/api';
+import { useStoreVersion } from '@/lib/api/useStoreVersion';
+import { useCurrentUser } from '@/lib/api/useCurrentUser';
+import { CreateGroupModal } from '@/components/CreateGroupModal';
+import { PendingInvites } from '@/components/PendingInvites';
 
 export default function GroupsHomeScreen() {
   const router = useRouter();
-  const toast = useToast();
   const { user } = useCurrentUser();
-  const sessionVersion = useStoreVersion("session");
+  const sessionVersion = useStoreVersion('session');
   const [groups, setGroups] = useState<GroupWithMeta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const groupVersion = useStoreVersion("group:any");
+  const groupVersion = useStoreVersion('group:any');
   // Invite accept doesn't bump group:any — refetch so the new membership appears.
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -49,8 +47,7 @@ export default function GroupsHomeScreen() {
       })
       .catch((err) => {
         if (cancelled) return;
-        const message =
-          err instanceof ApiError ? err.message : "Failed to load groups";
+        const message = err instanceof ApiError ? err.message : 'Failed to load groups';
         setError(message);
       });
     return () => {
@@ -63,18 +60,11 @@ export default function GroupsHomeScreen() {
       <YStack flex={1} gap="$6">
         <YStack gap="$2">
           <Text variant="label.sm" color="$textTertiary">
-            {user ? `Hi, ${user.name.split(" ")[0]}` : "Welcome"}
+            {user ? `Hi, ${user.name.split(' ')[0]}` : 'Welcome'}
           </Text>
-          <YStack
-            flexDirection="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
+          <YStack flexDirection="row" alignItems="center" justifyContent="space-between">
             <Heading level={1}>Your groups</Heading>
-            <Pressable
-              onPress={() => setCreateOpen(true)}
-              accessibilityLabel="Create group"
-            >
+            <Pressable onPress={() => setCreateOpen(true)} accessibilityLabel="Create group">
               <View
                 width={40}
                 height={40}
@@ -115,14 +105,7 @@ export default function GroupsHomeScreen() {
           </Stack.Vertical>
         ) : groups.length === 0 ? (
           <EmptyState
-            icon={
-              <Icon
-                icon={PlusIcon}
-                tone="textTertiary"
-                size={32}
-                weight="regular"
-              />
-            }
+            icon={<Icon icon={PlusIcon} tone="textTertiary" size={32} weight="regular" />}
             title="No groups yet"
             description="Make your first group to start sharing lists with people."
             actionLabel="Create group"
@@ -146,10 +129,10 @@ export default function GroupsHomeScreen() {
                   </View>
                 }
                 title={g.name}
-                description={`${g.memberCount} ${g.memberCount === 1 ? "member" : "members"}  ·  ${g.listCount} ${g.listCount === 1 ? "list" : "lists"}`}
+                description={`${g.memberCount} ${g.memberCount === 1 ? 'member' : 'members'}  ·  ${g.listCount} ${g.listCount === 1 ? 'list' : 'lists'}`}
                 onPress={() =>
                   router.push({
-                    pathname: "/(app)/groups/[id]",
+                    pathname: '/(app)/groups/[id]',
                     params: { id: g.id },
                   } as never)
                 }
@@ -165,7 +148,7 @@ export default function GroupsHomeScreen() {
         onCreated={(groupId) => {
           setCreateOpen(false);
           router.push({
-            pathname: "/(app)/groups/[id]",
+            pathname: '/(app)/groups/[id]',
             params: { id: groupId },
           } as never);
         }}

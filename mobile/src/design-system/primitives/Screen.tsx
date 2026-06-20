@@ -25,10 +25,7 @@ export function Screen({
   padded = true,
 }: ScreenProps) {
   const content = (
-    <SafeAreaView
-      edges={edges as Edge[]}
-      style={{ flex: 1, paddingHorizontal: padded ? 16 : 0 }}
-    >
+    <SafeAreaView edges={edges as Edge[]} style={{ flex: 1, paddingHorizontal: padded ? 16 : 0 }}>
       {children}
     </SafeAreaView>
   );

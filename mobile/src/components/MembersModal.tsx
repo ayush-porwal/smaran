@@ -1,9 +1,9 @@
 // Backend enforces invariants (e.g. at least one admin); UI surfaces errors via toast.
-import { useCallback, useEffect, useState } from "react";
-import { Alert } from "react-native";
-import { ScrollView, View, YStack } from "tamagui";
+import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+import { ScrollView, View, YStack } from 'tamagui';
 
-import { Button, Modal, Pressable, Stack, Text, useToast } from "@/design-system";
+import { Button, Modal, Pressable, Stack, Text, useToast } from '@/design-system';
 import {
   ApiError,
   deleteGroup,
@@ -13,7 +13,7 @@ import {
   setMemberRole,
   type GroupMembership,
   type User,
-} from "@/lib/api";
+} from '@/lib/api';
 
 type Member = GroupMembership & { user: User };
 
@@ -29,7 +29,7 @@ type MembersModalProps = {
 };
 
 function displayName(m: Member): string {
-  return m.user.name || m.user.email || "Member";
+  return m.user.name || m.user.email || 'Member';
 }
 
 export function MembersModal({
@@ -51,9 +51,8 @@ export function MembersModal({
     listGroupMembers(groupId)
       .then(setMembers)
       .catch((err) => {
-        const message =
-          err instanceof ApiError ? err.message : "Couldn't load members";
-        toast.show({ kind: "error", message });
+        const message = err instanceof ApiError ? err.message : "Couldn't load members";
+        toast.show({ kind: 'error', message });
         setMembers([]);
       });
   }, [groupId, toast]);
@@ -66,38 +65,35 @@ export function MembersModal({
   }, [open, load]);
 
   async function onToggleRole(m: Member) {
-    const nextRole = m.role === "admin" ? "member" : "admin";
+    const nextRole = m.role === 'admin' ? 'member' : 'admin';
     setBusyId(m.userId);
     try {
       const updated = await setMemberRole(groupId, m.userId, nextRole);
       setMembers((prev) =>
-        (prev ?? []).map((x) =>
-          x.userId === m.userId ? { ...x, role: updated.role } : x,
-        ),
+        (prev ?? []).map((x) => (x.userId === m.userId ? { ...x, role: updated.role } : x)),
       );
       toast.show({
-        kind: "success",
+        kind: 'success',
         message:
-          nextRole === "admin"
+          nextRole === 'admin'
             ? `${displayName(m)} is now an admin`
             : `${displayName(m)} is now a member`,
       });
       onMembersChanged();
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "Couldn't update role";
-      toast.show({ kind: "error", message });
+      const message = err instanceof ApiError ? err.message : "Couldn't update role";
+      toast.show({ kind: 'error', message });
     } finally {
       setBusyId(null);
     }
   }
 
   function confirmRemove(m: Member) {
-    Alert.alert("Remove member", `Remove ${displayName(m)} from ${groupName}?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert('Remove member', `Remove ${displayName(m)} from ${groupName}?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: "Remove",
-        style: "destructive",
+        text: 'Remove',
+        style: 'destructive',
         onPress: () => void onRemove(m),
       },
     ]);
@@ -108,21 +104,20 @@ export function MembersModal({
     try {
       await removeMember(groupId, m.userId);
       setMembers((prev) => (prev ?? []).filter((x) => x.userId !== m.userId));
-      toast.show({ kind: "success", message: `Removed ${displayName(m)}` });
+      toast.show({ kind: 'success', message: `Removed ${displayName(m)}` });
       onMembersChanged();
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "Couldn't remove member";
-      toast.show({ kind: "error", message });
+      const message = err instanceof ApiError ? err.message : "Couldn't remove member";
+      toast.show({ kind: 'error', message });
     } finally {
       setBusyId(null);
     }
   }
 
   function confirmLeave() {
-    Alert.alert("Leave group", `Leave ${groupName}?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Leave", style: "destructive", onPress: () => void onLeave() },
+    Alert.alert('Leave group', `Leave ${groupName}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Leave', style: 'destructive', onPress: () => void onLeave() },
     ]);
   }
 
@@ -130,13 +125,12 @@ export function MembersModal({
     setLeaving(true);
     try {
       await leaveGroup(groupId);
-      toast.show({ kind: "success", message: `Left ${groupName}` });
+      toast.show({ kind: 'success', message: `Left ${groupName}` });
       onOpenChange(false);
       onLeftGroup();
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "Couldn't leave the group";
-      toast.show({ kind: "error", message });
+      const message = err instanceof ApiError ? err.message : "Couldn't leave the group";
+      toast.show({ kind: 'error', message });
     } finally {
       setLeaving(false);
     }
@@ -144,11 +138,11 @@ export function MembersModal({
 
   function confirmDelete() {
     Alert.alert(
-      "Delete group",
+      'Delete group',
       `Delete ${groupName} and all of its lists for everyone? This can't be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => void onDelete() },
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void onDelete() },
       ],
     );
   }
@@ -157,13 +151,12 @@ export function MembersModal({
     setLeaving(true);
     try {
       await deleteGroup(groupId);
-      toast.show({ kind: "success", message: `Deleted ${groupName}` });
+      toast.show({ kind: 'success', message: `Deleted ${groupName}` });
       onOpenChange(false);
       onLeftGroup();
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "Couldn't delete the group";
-      toast.show({ kind: "error", message });
+      const message = err instanceof ApiError ? err.message : "Couldn't delete the group";
+      toast.show({ kind: 'error', message });
     } finally {
       setLeaving(false);
     }
@@ -175,11 +168,9 @@ export function MembersModal({
       onOpenChange={onOpenChange}
       title="Members"
       description={
-        isAdmin
-          ? "Manage who's in the group and what they can do."
-          : "Everyone in this group."
+        isAdmin ? "Manage who's in the group and what they can do." : 'Everyone in this group.'
       }
-      secondaryAction={{ label: "Done", onPress: () => onOpenChange(false) }}
+      secondaryAction={{ label: 'Done', onPress: () => onOpenChange(false) }}
     >
       <YStack gap="$4">
         <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
@@ -215,10 +206,10 @@ export function MembersModal({
                     <YStack flex={1}>
                       <Text variant="body.md" color="$textPrimary" fontWeight="500">
                         {name}
-                        {isSelf ? " (you)" : ""}
+                        {isSelf ? ' (you)' : ''}
                       </Text>
                       <Text variant="body.sm" color="$textTertiary">
-                        {m.role === "admin" ? "Admin" : "Member"}
+                        {m.role === 'admin' ? 'Admin' : 'Member'}
                       </Text>
                     </YStack>
                     {isAdmin && !isSelf ? (
@@ -230,7 +221,7 @@ export function MembersModal({
                           onPress={() => onToggleRole(m)}
                           loading={busyId === m.userId}
                         >
-                          {m.role === "admin" ? "Make member" : "Make admin"}
+                          {m.role === 'admin' ? 'Make member' : 'Make admin'}
                         </Button>
                         <Pressable
                           onPress={() => confirmRemove(m)}

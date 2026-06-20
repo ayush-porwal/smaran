@@ -31,10 +31,7 @@ export function Modal({
   return (
     <Dialog modal open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          key="overlay"
-          backgroundColor="rgba(0,0,0,0.5)"
-        />
+        <Dialog.Overlay key="overlay" backgroundColor="rgba(0,0,0,0.5)" />
         <Dialog.Content
           key="content"
           backgroundColor="$bgSurface"
@@ -64,12 +61,7 @@ export function Modal({
               {title}
             </Heading>
             {description ? (
-              <Text
-                variant="body.md"
-                color="$textSecondary"
-                textAlign="center"
-                maxWidth={320}
-              >
+              <Text variant="body.md" color="$textSecondary" textAlign="center" maxWidth={320}>
                 {description}
               </Text>
             ) : null}
