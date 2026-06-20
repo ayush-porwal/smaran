@@ -20,6 +20,7 @@ jobs:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
       stack_prefix: pr${{ github.event.pull_request.number }}-
+      # Trailing dash is part of CDK_STACK_PREFIX — bin/smaran.ts concatenates without adding another.
       environment: sandbox
       install-directory: .
       working-directory: infra

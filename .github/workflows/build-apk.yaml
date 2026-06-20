@@ -41,6 +41,7 @@ jobs:
 
       - name: Resolve env settings
         id: resolve
+        # Stack/account/profile mapping lives in deploy-envs.json — keep smaran IDs out of the reusable actions.
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           PR_NUMBER: ${{ inputs.pr_number }}
@@ -72,6 +73,7 @@ jobs:
           node-version: '24.x'
 
       - name: Configure AWS credentials (infra)
+        # Hop 1: GitHub OIDC → infra account (only account with the OIDC trust).
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::126606499529:role/ap-github-actions-cdk
@@ -83,6 +85,7 @@ jobs:
           role-to-assume: arn:aws:iam::${{ steps.resolve.outputs.account }}:role/cdk-hnb659fds-lookup-role-${{ steps.resolve.outputs.account }}-eu-central-1
           aws-region: eu-central-1
           role-chaining: true
+          # Hop 2: stack outputs live in the target account; lookup role trust lacks sts:TagSession.
           role-skip-session-tagging: true
 
       - name: Write mobile config from stack outputs
@@ -108,6 +111,7 @@ jobs:
       install-directory: .
       working-directory: mobile
       lockfile-path: package-lock.json
+      # Repo root so workspace deps resolve; .easignore trims what gets uploaded.
       eas-project-root: ${{ github.workspace }}
       config-directory: mobile/config
       config-artifact: mobile-config-${{ inputs.environment }}

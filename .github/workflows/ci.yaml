@@ -39,6 +39,7 @@ jobs:
               - 'mobile/**'
               - '.github/workflows/**'
             shared:
+              # Root lockfile / shared tooling — run both workspace checks when these change.
               - 'package.json'
               - 'package-lock.json'
               - 'turbo.json'
@@ -97,6 +98,7 @@ jobs:
   deploy_sandbox:
     name: sandbox — diff + deploy
     needs: [changes, format, infra, mobile]
+    # Infra-only PRs skip mobile — that's fine. Never deploy if format/infra failed.
     if: |
       github.event_name == 'pull_request' &&
       always() &&
@@ -108,6 +110,7 @@ jobs:
       (needs.mobile.result == 'success' || needs.mobile.result == 'skipped')
     uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff-deploy.yaml@feature/actions-improvements
     with:
+      # Smaran-specific — reusable workflow stays generic; paths/stack/role live here.
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
       stack_prefix: pr${{ github.event.pull_request.number }}-
