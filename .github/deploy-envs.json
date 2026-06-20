@@ -1,0 +1,21 @@
+{
+  "sandbox": {
+    "account": "219602461448",
+    "stack": "pr{pr_number}-smaran-sandbox-eu-central-1",
+    "profile": "sandbox",
+    "config_env": "sandbox",
+    "requires_pr_number": true
+  },
+  "staging": {
+    "account": "139316820779",
+    "stack": "smaran-staging-eu-central-1",
+    "profile": "staging",
+    "config_env": "staging"
+  },
+  "production": {
+    "account": "916657620124",
+    "stack": "smaran-production-eu-central-1",
+    "profile": "production",
+    "config_env": "prod"
+  }
+}

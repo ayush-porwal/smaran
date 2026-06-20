@@ -1,12 +1,14 @@
 name: deploy
 
-# Push-to-main pipeline: build → staging → prod (the reference chain).
-# Backend only — mobile APKs are built on demand via build-apk.yaml
-# (and can be extended to staging/prod), fetching stack outputs directly.
+# Push-to-main pipeline: staging → prod. Backend only — mobile APKs are
+# built on demand via build-apk.yaml.
 #
-# Staging and production deploys are gated by GitHub environment
-# required reviewers. The diff jobs are ungated so a reviewer reads the
-# plan before approving the deploy.
+# PR CI (ci.yaml) must pass before merge — enforce via branch protection on
+# main (see .github/BRANCH_PROTECTION.md). Staging and production deploys
+# are gated by GitHub environment required reviewers. Diff jobs are ungated
+# so a reviewer reads the plan before approving the deploy.
+#
+# Manual runs (`workflow_dispatch`) re-run infra CI first.
 
 on:
   push:
@@ -18,49 +20,61 @@ permissions:
   id-token: write
 
 jobs:
-  # --- infra CI re-run: gate the whole chain on a green build -------
-  build:
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@main
+  ci:
+    if: github.event_name == 'workflow_dispatch'
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@feature/actions-improvements
     with:
+      install-directory: .
       working-directory: infra
+      lockfile-path: package-lock.json
+      npm-workspace: smaran-infra
       node-version: '24.x'
+      lint: true
+      format-check: true
 
-  # --- staging ------------------------------------------------------
   diff_staging:
-    needs: build
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff.yaml@main
+    needs: ci
+    if: always() && !cancelled() && !failure() && (github.event_name == 'push' || needs.ci.result == 'success')
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff.yaml@feature/actions-improvements
     with:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-staging-eu-central-1
+      install-directory: .
       working-directory: infra
+      lockfile-path: package-lock.json
       node-version: '24.x'
 
   deploy_staging:
     needs: diff_staging
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-deploy.yaml@main
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-deploy.yaml@feature/actions-improvements
     with:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-staging-eu-central-1
       environment: staging
+      install-directory: .
       working-directory: infra
+      lockfile-path: package-lock.json
       node-version: '24.x'
 
-  # --- prod (after staging deploys) ---------------------------------
   diff_prod:
     needs: deploy_staging
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff.yaml@main
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff.yaml@feature/actions-improvements
     with:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-production-eu-central-1
+      install-directory: .
       working-directory: infra
+      lockfile-path: package-lock.json
       node-version: '24.x'
 
   deploy_prod:
     needs: diff_prod
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-deploy.yaml@main
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-deploy.yaml@feature/actions-improvements
     with:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: smaran-production-eu-central-1
       environment: production
+      install-directory: .
       working-directory: infra
+      lockfile-path: package-lock.json
       node-version: '24.x'

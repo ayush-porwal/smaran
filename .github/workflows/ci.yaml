@@ -1,7 +1,8 @@
 name: ci
 
-# PR checks. Installs from the monorepo root (npm workspaces) and runs
-# package checks via workspace scripts / turbo.
+# PR checks + gated sandbox deploy. Installs from the monorepo root (npm
+# workspaces). Sandbox CDK diff+deploy runs only after CI passes and only
+# when infra paths changed. Teardown stays in destroy-sandbox.yaml.
 
 on:
   pull_request:
@@ -10,67 +11,108 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: ci-${{ github.event.pull_request.head.label || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  infra:
-    name: infra — build, test, synth, lint
+  changes:
+    name: detect path changes
+    runs-on: ubuntu-latest
+    outputs:
+      infra: ${{ steps.manual.outputs.infra == 'true' || steps.filter.outputs.infra == 'true' || steps.filter.outputs.shared == 'true' }}
+      mobile: ${{ steps.manual.outputs.mobile == 'true' || steps.filter.outputs.mobile == 'true' || steps.filter.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          filters: |
+            infra:
+              - 'infra/**'
+              - '.github/workflows/**'
+            mobile:
+              - 'mobile/**'
+              - '.github/workflows/**'
+            shared:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'turbo.json'
+              - 'packages/**'
+              - '.prettierrc.json'
+              - '.prettierignore'
+              - 'lint-staged.config.mjs'
+
+      - name: Manual run — check all paths
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "infra=true" >> "$GITHUB_OUTPUT"
+          echo "mobile=true" >> "$GITHUB_OUTPUT"
+
+  format:
+    name: format check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '24.x'
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Install
-        run: npm ci
+      - run: npm ci
 
-      - name: Lint
-        run: npm run lint --workspace=smaran-infra
+      - run: npm run format:check
 
-      - name: Build (tsc)
-        run: npm run build --workspace=smaran-infra
-
-      - name: Test (jest)
-        run: npm test --workspace=smaran-infra
-
-      # Stacks pin env.account/region, so synth never hits STS; the
-      # dummy creds just stop the SDK complaining about having none.
-      - name: CDK synth
-        working-directory: infra
-        run: npx cdk synth --quiet
-        env:
-          AWS_ACCESS_KEY_ID: dummy
-          AWS_SECRET_ACCESS_KEY: dummy
-          AWS_REGION: eu-central-1
+  infra:
+    name: infra — lint, build, test, synth
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true'
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@feature/actions-improvements
+    with:
+      install-directory: .
+      working-directory: infra
+      lockfile-path: package-lock.json
+      npm-workspace: smaran-infra
+      node-version: '24.x'
+      lint: true
 
   mobile:
     name: mobile — typecheck, lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.mobile == 'true'
+    uses: ayush-porwal/actions/.github/workflows/nodejs-ci.yaml@feature/actions-improvements
+    with:
+      install-directory: .
+      lockfile-path: package-lock.json
+      npm-workspace: smaran
+      node-version: '24.x'
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24.x'
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck --workspace=smaran
-
-      - name: Lint
-        run: npm run lint --workspace=smaran
+  deploy_sandbox:
+    name: sandbox — diff + deploy
+    needs: [changes, format, infra, mobile]
+    if: |
+      github.event_name == 'pull_request' &&
+      always() &&
+      !cancelled() &&
+      !contains(needs.*.result, 'failure') &&
+      needs.changes.outputs.infra == 'true' &&
+      needs.format.result == 'success' &&
+      needs.infra.result == 'success' &&
+      (needs.mobile.result == 'success' || needs.mobile.result == 'skipped')
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-diff-deploy.yaml@feature/actions-improvements
+    with:
+      aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
+      stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
+      stack_prefix: pr${{ github.event.pull_request.number }}-
+      environment: sandbox
+      install-directory: .
+      working-directory: infra
+      lockfile-path: package-lock.json
+      node-version: '24.x'

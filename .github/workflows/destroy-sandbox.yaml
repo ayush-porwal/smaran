@@ -15,11 +15,13 @@ permissions:
 
 jobs:
   destroy_sandbox:
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-destroy.yaml@main
+    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-destroy.yaml@feature/actions-improvements
     with:
       aws_role: arn:aws:iam::126606499529:role/ap-github-actions-cdk
       stack_name: pr${{ github.event.pull_request.number }}-smaran-sandbox-eu-central-1
       stack_prefix: pr${{ github.event.pull_request.number }}-
       environment: sandbox
+      install-directory: .
       working-directory: infra
+      lockfile-path: package-lock.json
       node-version: '24.x'

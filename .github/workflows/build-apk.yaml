@@ -4,10 +4,9 @@ name: build-apk
 # can be sideloaded onto a phone. Manual (workflow_dispatch) rather than
 # per-deploy to stay within EAS free-tier build limits.
 #
-# Self-contained: the config job fetches the live stack outputs itself
-# (the deploy workflows don't write mobile config), writes
-# mobile/config/{env}.json, and hands it to the EAS build via an
-# artifact. The matching eas.json profile sets SMARAN_ENV.
+# Environment → stack/account mapping lives in .github/deploy-envs.json.
+# The config job fetches live stack outputs; eas-build reusable workflow
+# submits the EAS build.
 
 on:
   workflow_dispatch:
@@ -36,74 +35,61 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       profile: ${{ steps.resolve.outputs.profile }}
+      config_env: ${{ steps.resolve.outputs.config_env }}
     steps:
-      # Map the chosen env → account, stack name, EAS profile, SMARAN_ENV.
+      - uses: actions/checkout@v7
+
       - name: Resolve env settings
         id: resolve
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           PR_NUMBER: ${{ inputs.pr_number }}
         run: |
-          set -e
-          case "$ENVIRONMENT" in
-            sandbox)
-              [ -n "$PR_NUMBER" ] || { echo "pr_number is required for sandbox" >&2; exit 1; }
-              account=219602461448
-              stack="pr${PR_NUMBER}-smaran-sandbox-eu-central-1"
-              profile=sandbox
-              smaran_env=sandbox ;;
-            staging)
-              account=139316820779
-              stack=smaran-staging-eu-central-1
-              profile=staging
-              smaran_env=staging ;;
-            production)
-              account=916657620124
-              stack=smaran-production-eu-central-1
-              profile=production
-              smaran_env=prod ;;
-            *) echo "unknown environment: $ENVIRONMENT" >&2; exit 1 ;;
-          esac
-          {
-            echo "account=$account"
-            echo "stack=$stack"
-            echo "profile=$profile"
-            echo "smaran_env=$smaran_env"
-          } >> "$GITHUB_OUTPUT"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const env = process.env.ENVIRONMENT;
+          const pr = process.env.PR_NUMBER ?? '';
+          const cfg = JSON.parse(fs.readFileSync('.github/deploy-envs.json', 'utf8'));
+          const entry = cfg[env];
+          if (!entry) {
+            console.error(`unknown environment: ${env}`);
+            process.exit(1);
+          }
+          if (entry.requires_pr_number && !pr) {
+            console.error('pr_number is required for sandbox');
+            process.exit(1);
+          }
+          const stack = entry.stack.replaceAll('{pr_number}', pr);
+          const out = process.env.GITHUB_OUTPUT;
+          fs.appendFileSync(out, `account=${entry.account}\n`);
+          fs.appendFileSync(out, `stack=${stack}\n`);
+          fs.appendFileSync(out, `profile=${entry.profile}\n`);
+          fs.appendFileSync(out, `config_env=${entry.config_env}\n`);
+          NODE
 
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '24.x'
 
-      # Hop 1 (OIDC): the infra account holds the only GitHub OIDC trust.
       - name: Configure AWS credentials (infra)
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::126606499529:role/ap-github-actions-cdk
           aws-region: eu-central-1
 
-      # Hop 2: chain-assume the target account's read-only CDK lookup role
-      # (the infra role can only assume `cdk-*` roles; the stack lives in
-      # the target account, not the infra account).
       - name: Assume target lookup role
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ steps.resolve.outputs.account }}:role/cdk-hnb659fds-lookup-role-${{ steps.resolve.outputs.account }}-eu-central-1
           aws-region: eu-central-1
           role-chaining: true
-          # The CDK lookup role's trust policy grants sts:AssumeRole but not
-          # sts:TagSession, so disable the action's default session tagging.
           role-skip-session-tagging: true
 
       - name: Write mobile config from stack outputs
         working-directory: mobile
         env:
           STACK: ${{ steps.resolve.outputs.stack }}
-          SMARAN_ENV: ${{ steps.resolve.outputs.smaran_env }}
+          SMARAN_ENV: ${{ steps.resolve.outputs.config_env }}
         run: |
           node scripts/pull-config.mjs --stack "$STACK" --env "$SMARAN_ENV" --out "${SMARAN_ENV}.json"
 
@@ -111,50 +97,22 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mobile-config-${{ inputs.environment }}
-          path: mobile/config/${{ steps.resolve.outputs.smaran_env }}.json
+          path: mobile/config/${{ steps.resolve.outputs.config_env }}.json
           if-no-files-found: error
           retention-days: 7
 
   build_android:
     needs: config
-    name: EAS build (android/${{ needs.config.outputs.profile }})
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24.x'
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install
-        run: npm ci
-
-      - name: Download env config
-        uses: actions/download-artifact@v7
-        with:
-          name: mobile-config-${{ inputs.environment }}
-          path: mobile/config
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v9
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      # Workspace deps resolve from the root lockfile; EAS_PROJECT_ROOT at repo
-      # root plus .easignore keeps the upload lean (mobile + shared packages only).
-      - name: Build
-        working-directory: mobile
-        env:
-          EAS_NO_VCS: '1'
-          EAS_PROJECT_ROOT: ${{ github.workspace }}
-        run: |
-          eas build \
-            --platform android \
-            --profile ${{ needs.config.outputs.profile }} \
-            --non-interactive \
-            --no-wait
+    uses: ayush-porwal/actions/.github/workflows/eas-build.yaml@feature/actions-improvements
+    with:
+      install-directory: .
+      working-directory: mobile
+      lockfile-path: package-lock.json
+      eas-project-root: ${{ github.workspace }}
+      config-directory: mobile/config
+      config-artifact: mobile-config-${{ inputs.environment }}
+      platform: android
+      profile: ${{ needs.config.outputs.profile }}
+      node-version: '24.x'
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

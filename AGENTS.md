@@ -37,8 +37,9 @@ and root `.prettierrc.json`. ESLint is pinned to v9 because
   wiring) is fetched live from stack outputs by `mobile/scripts/pull-config.mjs`
   — at build time in `build-apk.yaml` (a single `workflow_dispatch` that
   takes an env + PR number and builds sandbox/staging/production), and
-  locally via `npm run config:pull`. There are no smaran-local composite
-  actions.
+  locally via `npm run config:pull`. Environment → stack mapping lives in
+  `.github/deploy-envs.json`. Per-PR sandbox deploy runs inside `ci.yaml`
+  (after checks pass); teardown is `destroy-sandbox.yaml`.
 
 ## AWS / deploys
 
