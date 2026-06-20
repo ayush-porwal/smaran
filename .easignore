@@ -1,0 +1,9 @@
+# Monorepo root install; .easignore trims the upload (see build-apk workflow).
+.git
+.github
+docs
+infra
+mobile/.agents
+**/.expo
+**/node_modules
+**/cdk.out

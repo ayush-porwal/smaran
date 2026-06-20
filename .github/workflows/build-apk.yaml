@@ -13,12 +13,12 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Which deployed backend to build against."
+        description: 'Which deployed backend to build against.'
         required: true
         type: choice
         options: [sandbox, staging, production]
       pr_number:
-        description: "PR number — required for sandbox only (e.g. 4 for pr4-smaran-sandbox)."
+        description: 'PR number — required for sandbox only (e.g. 4 for pr4-smaran-sandbox).'
         required: false
         type: string
 
@@ -77,7 +77,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "24.x"
+          node-version: '24.x'
 
       # Hop 1 (OIDC): the infra account holds the only GitHub OIDC trust.
       - name: Configure AWS credentials (infra)
@@ -117,12 +117,44 @@ jobs:
 
   build_android:
     needs: config
-    uses: ayush-porwal/actions/.github/workflows/eas-build.yaml@main
-    with:
-      working-directory: mobile
-      node-version: "24.x"
-      platform: android
-      profile: ${{ needs.config.outputs.profile }}
-      config-artifact: mobile-config-${{ inputs.environment }}
-    secrets:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    name: EAS build (android/${{ needs.config.outputs.profile }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Download env config
+        uses: actions/download-artifact@v7
+        with:
+          name: mobile-config-${{ inputs.environment }}
+          path: mobile/config
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Workspace deps resolve from the root lockfile; EAS_PROJECT_ROOT at repo
+      # root plus .easignore keeps the upload lean (mobile + shared packages only).
+      - name: Build
+        working-directory: mobile
+        env:
+          EAS_NO_VCS: '1'
+          EAS_PROJECT_ROOT: ${{ github.workspace }}
+        run: |
+          eas build \
+            --platform android \
+            --profile ${{ needs.config.outputs.profile }} \
+            --non-interactive \
+            --no-wait

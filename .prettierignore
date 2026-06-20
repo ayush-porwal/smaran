@@ -1,0 +1,10 @@
+node_modules
+package-lock.json
+cdk.out
+.expo
+.tamagui
+dist
+web-build
+android
+ios
+coverage

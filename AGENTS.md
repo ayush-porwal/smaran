@@ -4,13 +4,23 @@ Always use the `gh` CLI for GitHub-related things.
 
 ## Layout
 
-Monorepo with two independent npm projects:
+Monorepo (`npm` workspaces + Turborepo) with two packages:
 
 - `infra/` — AWS CDK backend (TypeScript). Scripts: `build` (tsc),
-  `test` (jest), `synth`. CDK app runs via ts-node (`bin/smaran.ts`),
-  so `cdk diff`/`deploy` need no prior build.
-- `mobile/` — Expo + Tamagui app. `lint` = `expo lint`; typecheck via
-  `tsc --noEmit` (no build/test scripts). See `mobile/AGENTS.md`.
+  `test` (jest), `synth`, `lint`, `typecheck`. CDK app runs via ts-node
+  (`bin/smaran.ts`), so `cdk diff`/`deploy` need no prior build.
+- `mobile/` — Expo + Tamagui app. Scripts: `lint`, `typecheck`; start
+  via `expo start --dev-client`. See `mobile/AGENTS.md`.
+
+Root tooling (install once at repo root):
+
+- `npm install` — installs all workspaces + Husky pre-commit hook
+- `npm run lint` / `npm run typecheck` / `npm run test` — via Turborepo
+- `npm run format` — Prettier across the repo (also runs on pre-commit)
+
+Shared config lives in `packages/eslint-config` (`@smaran/eslint-config`)
+and root `.prettierrc.json`. ESLint is pinned to v9 because
+`eslint-config-expo` is not yet compatible with ESLint v10.
 
 ## CI/CD
 

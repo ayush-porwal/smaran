@@ -1,7 +1,7 @@
 name: ci
 
-# PR checks. Thin caller over the reusable workflows; mobile gets its
-# own job (the reference is backend-only).
+# PR checks. Installs from the monorepo root (npm workspaces) and runs
+# package checks via workspace scripts / turbo.
 
 on:
   pull_request:
@@ -17,13 +17,60 @@ concurrency:
 
 jobs:
   infra:
-    uses: ayush-porwal/actions/.github/workflows/nodejs-cdk-ci.yaml@main
-    with:
-      working-directory: infra
-      node-version: "24.x"
+    name: infra — build, test, synth, lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace=smaran-infra
+
+      - name: Build (tsc)
+        run: npm run build --workspace=smaran-infra
+
+      - name: Test (jest)
+        run: npm test --workspace=smaran-infra
+
+      # Stacks pin env.account/region, so synth never hits STS; the
+      # dummy creds just stop the SDK complaining about having none.
+      - name: CDK synth
+        working-directory: infra
+        run: npx cdk synth --quiet
+        env:
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy
+          AWS_REGION: eu-central-1
 
   mobile:
-    uses: ayush-porwal/actions/.github/workflows/nodejs-ci.yaml@main
-    with:
-      working-directory: mobile
-      node-version: "24.x"
+    name: mobile — typecheck, lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=smaran
+
+      - name: Lint
+        run: npm run lint --workspace=smaran

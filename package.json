@@ -1,0 +1,33 @@
+{
+  "name": "smaran-monorepo",
+  "private": true,
+  "workspaces": [
+    "infra",
+    "mobile",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "prepare": "husky",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "eslint": "9.39.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "prettier": "^3.8.4",
+    "turbo": "^2.9.18"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "packageManager": "npm@10.9.8",
+  "overrides": {
+    "eslint": "$eslint"
+  }
+}

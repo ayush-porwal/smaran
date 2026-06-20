@@ -19,6 +19,7 @@ yarn-error.*
 
 # Generated / build artifacts that should never be tracked
 node_modules/
+.turbo/
 *.tsbuildinfo
 cdk.out/
 .cdk.staging/
